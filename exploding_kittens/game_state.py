@@ -18,21 +18,27 @@ class GameState:
     #Il giocatore che deve agire in questo momento.
     @property
     def current_player(self) -> Player:
-        ...
+        return self.players[self.current_player_index]
 
     #Lista dei giocatori ancora in gioco.
     @property
     def alive_players(self) -> list[Player]:
-        ...
+        return [player for player in self.players if player.is_alive]
 
     #True se c'è solo un giocatore rimasto.
     @property
     def is_game_over(self) -> bool:
-        ...
+        return len(self.alive_players) == 1
 
     #Avanza al prossimo giocatore vivo, tenendo conto di turns_to_play e direction.
     def next_player(self) -> None:
-        ...
+        if self.is_game_over:
+           self.winner = self.alive_players[0]
+           return
+        self.current_player_index = self.current_player_index + self.direction
+        #salta i giocatori morti
+        while not self.current_player.is_alive:
+              self.current_player_index = self.current_player_index + self.direction
 
     #Serializza lo stato per inviarlo via rete (JSON-serializable).
     def to_dict(self) -> dict:

@@ -1,17 +1,22 @@
 #Base exception per tutto il progetto.
-class ExplodingKittensError(Exception): ...
+class ExplodingKittensError(Exception): 
+    ...
 
+#Deck vuoto quando si tenta di pescare.
 class EmptyDeckError(ExplodingKittensError):
-    """Deck vuoto quando si tenta di pescare."""
-
+    ...
+    
+#Il giocatore non ha la carta che vuole giocare.
 class CardNotInHandError(ExplodingKittensError):
-    """Il giocatore non ha la carta che vuole giocare."""
+    ...
 
+#Mossa non valida secondo le regole.
 class InvalidMoveError(ExplodingKittensError):
-    """Mossa non valida secondo le regole."""
+   
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
 
+#ID giocatore non riconosciuto.
 class PlayerNotFoundError(ExplodingKittensError):
-    """ID giocatore non riconosciuto."""
+  ...

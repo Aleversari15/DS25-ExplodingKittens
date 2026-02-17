@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import random
 from typing import Optional
 from .card import Card, CardType
-import exceptions
+from .exceptions import EmptyDeckError
 
 @dataclass
 class Deck:
