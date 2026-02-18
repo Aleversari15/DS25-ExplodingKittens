@@ -4,7 +4,10 @@ class ExplodingKittensError(Exception):
 
 #Deck vuoto quando si tenta di pescare.
 class EmptyDeckError(ExplodingKittensError):
-    ...
+    
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
     
 #Il giocatore non ha la carta che vuole giocare.
 class CardNotInHandError(ExplodingKittensError):

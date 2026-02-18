@@ -1,7 +1,7 @@
 
 import random
 from typing import Optional
-from exploding_kittens import exceptions
+from . import exceptions
 from .game_state import GameState
 from .card import Card, CardType
 from .player import Player
@@ -47,28 +47,33 @@ class GameEngine:
     #Il giocatore pesca una carta. Se è una Exploding Kitten,
     #controlla se ha un Defuse, altrimenti viene eliminato.
     @staticmethod
-    def draw_card(state: GameState, player_id: str) -> GameState:
-        player = state.get_player(player_id)
+    def draw_card(state: GameState) -> GameState:
+        player = state.current_player
         try:
             card = state.deck.draw()
         except exceptions.EmptyDeckError:
-            #TODO: gestire caso mazzo vuoto (rimescolare scarti?)
-            pass
+            #se il mazzo è vuoto, ricicla le carte scartate e mischia
+            state.deck._cards = state.discard_pile.copy()
+            state.discard_pile.clear()
+            state.deck.shuffle()
+            card = state.deck.draw() 
             
         if card.type == CardType.EXPLODING_KITTEN:
             if player.has_card(CardType.DEFUSE):
-                return GameEngine.use_defuse(state, player_id, random.randint(0, len(state.deck.cards)))  #inserisce in posizione casuale nel mazzo
+                #inserisce in posizione casuale nel mazzo
+                return GameEngine.use_defuse(state, random.randint(0, len(state.deck._cards)))  
             else:
                 player.eliminate()
         else:
             player.add_card(card)  
+        return state
         
 
     #Il giocatore usa un Defuse per rimettere la Exploding Kitten nel deck
     #alla posizione scelta.
     @staticmethod
-    def use_defuse(state: GameState, player_id: str, insert_position: int) -> GameState:
-        player = state.get_player(player_id)
+    def use_defuse(state: GameState, insert_position: int) -> GameState:
+        player = state.current_player
         player.remove_card(CardType.DEFUSE)
         state.deck.insert(Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Pesca questa carta e perdi se non hai un Defuse!"), insert_position)
         return state
@@ -83,7 +88,9 @@ class GameEngine:
     def _apply_attack(state: GameState) -> GameState: ...
 
     @staticmethod
-    def _apply_shuffle(state: GameState) -> GameState: ...
+    def _apply_shuffle(state: GameState) -> GameState: 
+        state.deck.shuffle()
+        return state
 
     @staticmethod
     def _apply_see_the_future(state: GameState, player_id: str) -> GameState: ...

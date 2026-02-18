@@ -32,7 +32,7 @@ class Deck:
     #Pesca la carta in cima al deck. Solleva EmptyDeckError se vuoto.
     def draw(self) -> Card:
         if len(self) == 0:
-            raise exceptions.EmptyDeckError("Impossibile pescare, mazzo vuoto!")
+            raise EmptyDeckError("Impossibile pescare, mazzo vuoto!")
         return self._cards.pop(0)
 
     #Inserisce una carta a una posizione specifica (usato da Defuse).
