@@ -11,7 +11,6 @@ The last player standing wins.
 - ⚔️ Attack --> End your turn and force the next player to take two turns.
 - 🔀 Shuffle --> Shuffle the draw pile.
 - 👁️ See the Future --> Peek at the top 3 cards of the deck.
-- 🚫 Nope --> Cancel the action of any card played by another player.
 - 🐱 Cat Cards --> Play as pairs to steal a random card from another player.
 
 ## Team members
