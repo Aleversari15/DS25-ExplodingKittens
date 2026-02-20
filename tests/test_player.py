@@ -1,7 +1,7 @@
 import pytest
 
-from exploding_kittens.player import Player
-from exploding_kittens.card import Card, CardType
+from exploding_kittens.game.model.player import Player
+from exploding_kittens.game.model.card import Card, CardType
 
 EMPTY_HAND = 0
 CARD_DRAWN = 1

@@ -1,10 +1,10 @@
 import pytest
-from exploding_kittens.game_engine import GameEngine
-from exploding_kittens.game_state import GameState
-from exploding_kittens.player import Player
-from exploding_kittens.deck import Deck
-from exploding_kittens.card import Card, CardType
-from exploding_kittens.exceptions import EmptyDeckError
+from exploding_kittens.game.controller.game_engine import GameEngine
+from exploding_kittens.game.model.game_state import GameState
+from exploding_kittens.game.model.player import Player
+from exploding_kittens.game.model.deck import Deck
+from exploding_kittens.game.model.card import Card, CardType
+from exploding_kittens.game.model.exceptions import EmptyDeckError
 
 EMPTY_SIZE = 0
 DISCARD_PILE_SIZE = 3

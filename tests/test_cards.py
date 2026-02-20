@@ -1,5 +1,5 @@
 import pytest
-from exploding_kittens.card import Card, CardType
+from exploding_kittens.game.model.card import Card, CardType
 
 
 class TestCard:

@@ -1,8 +1,8 @@
 import pytest
-from exploding_kittens.game_state import GameState
-from exploding_kittens.player import Player
-from exploding_kittens.deck import Deck
-from exploding_kittens.card import Card, CardType
+from exploding_kittens.game.model.game_state import GameState
+from exploding_kittens.game.model.player import Player
+from exploding_kittens.game.model.deck import Deck
+from exploding_kittens.game.model.card import Card, CardType
 
 PLAYER_ID = 1
 PLAYER_ID_2 = 2
