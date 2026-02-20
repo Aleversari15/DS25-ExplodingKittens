@@ -9,7 +9,6 @@ class CardType(Enum):
     ATTACK = auto()
     SHUFFLE = auto()
     SEE_THE_FUTURE = auto()
-    NOPE = auto()
     CAT = auto() 
 
 @dataclass(frozen=True)
@@ -21,7 +20,3 @@ class Card:
     #Ritorna True se la carta può essere giocata attivamente (non Exploding/Defuse).
     def is_playable(self) -> bool:
         return self.type not in {CardType.EXPLODING_KITTEN, CardType.DEFUSE}
-
-    #Ritorna True se l'effetto di questa carta può essere annullato da un Nope.
-    def can_be_noped(self) -> bool:
-        return self.type not in {CardType.EXPLODING_KITTEN, CardType.DEFUSE, CardType.CAT}

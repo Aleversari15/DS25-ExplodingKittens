@@ -36,14 +36,34 @@ class GameEngine:
     #Lancia eccezione InvalidMoveError se la mossa non è legale.
     @staticmethod
     def play_card(state: GameState, player_id: str, card_type: CardType) -> GameState:
-        ...
+        player = state.get_player(player_id)
+        
+        if state.current_player.id != player_id:
+            raise exceptions.InvalidMoveError(f"Non è il turno di {player_id}")
+        
+        if not player.has_card(card_type):
+            raise exceptions.CardNotInHandError(f"Il giocatore non ha una carta {card_type.name}")
+        
+        cardPlayed  = player.remove_card(card_type)
+        state.discard_pile.append(cardPlayed)
 
-    #Un giocatore gioca un Nope sulla carta precedente.
-    #Può essere chiamato da qualsiasi giocatore fuori turno.
-    @staticmethod
-    def play_nope(state: GameState, player_id: str) -> GameState:
-        ...
+        if cardPlayed.can_be_noped():
+            state.pending_nope = True
 
+        if card_type == CardType.SKIP:
+            state = GameEngine._apply_skip(state)
+        elif card_type == CardType.ATTACK:
+            state = GameEngine._apply_attack(state)
+        elif card_type == CardType.SHUFFLE:
+            state = GameEngine._apply_shuffle(state)
+        elif card_type == CardType.SEE_THE_FUTURE:
+            state = GameEngine._apply_see_the_future(state, player_id)
+    
+        return state    
+        
+        
+
+    
     #Il giocatore pesca una carta. Se è una Exploding Kitten,
     #controlla se ha un Defuse, altrimenti viene eliminato.
     @staticmethod
@@ -52,7 +72,7 @@ class GameEngine:
         try:
             card = state.deck.draw()
         except exceptions.EmptyDeckError:
-            #se il mazzo è vuoto, ricicla le carte scartate e mischia
+            # se il mazzo è vuoto, ricicla le carte scartate e mischia
             state.deck._cards = state.discard_pile.copy()
             state.discard_pile.clear()
             state.deck.shuffle()
@@ -60,12 +80,15 @@ class GameEngine:
             
         if card.type == CardType.EXPLODING_KITTEN:
             if player.has_card(CardType.DEFUSE):
-                #inserisce in posizione casuale nel mazzo
-                return GameEngine.use_defuse(state, random.randint(0, len(state.deck._cards)))  
+                # La bomba è già stata pescata, quindi la rimettiamo
+                # Posizione casuale nel range del deck attuale (0 a lunghezza deck)
+                insert_pos = random.randint(0, len(state.deck))
+                state = GameEngine.use_defuse(state, insert_pos)
             else:
                 player.eliminate()
         else:
-            player.add_card(card)  
+            player.add_card(card)
+            
         return state
         
 
@@ -80,12 +103,20 @@ class GameEngine:
 
 
 
-    #EFFETTI DELLE SINGOLE CARTE 
+    #----------------EFFETTI DELLE SINGOLE CARTE ----------------------#
     @staticmethod
-    def _apply_skip(state: GameState) -> GameState: ...
+    def _apply_skip(state: GameState) -> GameState: 
+        state.next_player()
+        return state
 
+    #La carta attack obbliga il giocatore successivo a giocare due turni 
+    #quindi aumento il numero di tuno e passo al giocatore successivo
     @staticmethod
-    def _apply_attack(state: GameState) -> GameState: ...
+    def _apply_attack(state: GameState) -> GameState: 
+        state.turns_to_play+=1
+        state.next_player()
+        return state
+
 
     @staticmethod
     def _apply_shuffle(state: GameState) -> GameState: 
@@ -93,4 +124,12 @@ class GameEngine:
         return state
 
     @staticmethod
-    def _apply_see_the_future(state: GameState, player_id: str) -> GameState: ...
+    def _apply_see_the_future(state: GameState, player_id: str) -> GameState:
+        future_cards = state.deck.peek(3)
+        state.private_info = {
+            "type": "see_the_future",
+            "player_id": player_id,
+            "cards": future_cards
+        }
+        return state
+    

@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
+
+from exploding_kittens.exceptions import PlayerNotFoundError
 from .player import Player
 from .deck import Deck
 from .card import Card, CardType
@@ -10,12 +12,12 @@ class GameState:
     deck: Deck
     discard_pile: list[Card] = field(default_factory=list)
     current_player_index: int = 0
-    turns_to_play: int = 1          # aumenta con Attack
-    direction: int = 1              # 1 = orario, -1 = antiorario
+    turns_to_play: int = 1 # aumenta con Attack
+    direction: int = 1  # 1 = orario, -1 = antiorario
     winner: Optional[Player] = None
-    pending_nope: bool = False      # True se l'ultima carta giocata è in attesa di Nope
+    private_info: Optional[dict] = None #info da inviare in privato al giocatore quando usa la carta SeeTheFuture
 
-    #Il giocatore che deve agire in questo momento.
+    #Restituisce il giocatore che deve giocare il proprio turno.
     @property
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
@@ -48,3 +50,10 @@ class GameState:
     @classmethod
     def from_dict(cls, data: dict) -> "GameState":
         ...
+
+    #metodo utilizzato per restituire il Player della lista dato un id. 
+    def get_player(self, player_id: str) -> Player:
+        for player in self.players:
+            if player.id == player_id:
+                return player
+        raise PlayerNotFoundError(f"Giocatore {player_id} non trovato")    
