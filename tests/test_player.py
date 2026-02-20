@@ -3,6 +3,10 @@ import pytest
 from exploding_kittens.player import Player
 from exploding_kittens.card import Card, CardType
 
+EMPTY_HAND = 0
+CARD_DRAWN = 1
+CARD_DISCRAD = 1
+HAND_SIZE = 3
 
 @pytest.fixture
 def player():
@@ -27,10 +31,6 @@ def shuffle_card():
 @pytest.fixture
 def see_future_card():
     return Card(CardType.SEE_THE_FUTURE, "See the future", "")
-
-@pytest.fixture
-def nope_card():
-    return Card(CardType.NOPE, "Nope", "")
 
 
 
@@ -61,25 +61,27 @@ def test_player_add_multiple_cards(player, skip_card, favor_card, shuffle_card):
 
 
 #Test removing a card from player's hand
-def test_player_remove_card_from_hand(player, nope_card):
-    player.add_card(nope_card)
-    removed_card = player.remove_card(CardType.NOPE)  
+def test_player_remove_card_from_hand(player, see_future_card):
+    player.add_card(see_future_card)
+    removed_card = player.remove_card(CardType.SEE_THE_FUTURE)  
     
-    assert removed_card.type == CardType.NOPE  
-    assert len(player.hand) == 0
+    assert removed_card.type == CardType.SEE_THE_FUTURE  
+    assert len(player.hand) == EMPTY_HAND
 
 #Test hand_size returns correct count
 def test_player_hand_size(player, skip_card, attack_card):
-    assert player.hand_size() == 0
+    assert player.hand_size() == EMPTY_HAND
     
     player.add_card(skip_card)
-    assert player.hand_size() == 1
+    assert player.hand_size() == CARD_DRAWN 
     
+    hand = player.hand_size()
     player.add_card(attack_card)
-    assert player.hand_size() == 2
+    assert player.hand_size() == hand + CARD_DRAWN
     
+    hand = player.hand_size()
     player.remove_card(CardType.SKIP)
-    assert player.hand_size() == 1
+    assert player.hand_size() == hand - CARD_DISCRAD
 
 #Test multiple operations on same player
 def test_player_multiple_operations(player, skip_card, attack_card, favor_card):
@@ -88,12 +90,12 @@ def test_player_multiple_operations(player, skip_card, attack_card, favor_card):
     player.add_card(attack_card)
     player.add_card(favor_card)
     
-    assert player.hand_size() == 3
+    assert player.hand_size() == HAND_SIZE    
     assert player.has_card(CardType.SKIP) == True
     
     # Remove a card
     player.remove_card(CardType.ATTACK)
-    assert player.hand_size() == 2
+    assert player.hand_size() == HAND_SIZE - CARD_DISCRAD
     assert player.has_card(CardType.ATTACK) == False
     
     # Player still alive
@@ -102,4 +104,4 @@ def test_player_multiple_operations(player, skip_card, attack_card, favor_card):
     # Eliminate
     player.eliminate()
     assert player.is_alive == False
-    assert player.hand_size() == 0
+    assert player.hand_size() == EMPTY_HAND

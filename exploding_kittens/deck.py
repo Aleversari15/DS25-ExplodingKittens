@@ -12,17 +12,18 @@ class Deck:
     #Esclude le Exploding Kittens e i Defuse iniziali (vengono distribuiti separatamente).
     @classmethod
     def build_standard(cls, num_players: int) -> "Deck":
-       cards = []
-       cards += Card(CardType.ATTACK, "Attack", "Termina il turno del giocatore e obbliga il prossimo a fare due turni consecutivi") * 4
-       cards += Card(CardType.SKIP, "Skip", "Termina immediatamente il turno senza pescare una carta") * 4
-       cards += Card(CardType.SHUFFLE, "Shuffle", "Mischia il mazzo attuale, rendendo casuale il prossimo draw") * 4
-       cards += Card(CardType.SEE_THE_FUTURE, "See the future", "Permette di guardare le prossime 3 carte del mazzo") * 5
-       cards += Card(CardType.NOPE, "Nope", "Annulla l’azione di un altro giocatore (può bloccare quasi tutte le carte)") * 5
-       cards += Card(CardType.CAT, "Cat", "Carte con illustrazioni di gatti; senza effetti speciali, ma usabili per coppie/combos") * 24
+         cards = []
+         cards += [Card(CardType.ATTACK, "Attack", "Termina il turno del giocatore e obbliga il prossimo a fare due turni consecutivi")] * 4
+         cards += [Card(CardType.SKIP, "Skip", "Termina immediatamente il turno senza pescare una carta")] * 4
+         cards += [Card(CardType.SHUFFLE, "Shuffle", "Mischia il mazzo attuale, rendendo casuale il prossimo draw")] * 4
+         cards += [Card(CardType.SEE_THE_FUTURE, "See the future", "Permette di guardare le prossime 3 carte del mazzo")] * 5
+         cards += [Card(CardType.NOPE, "Nope", "Annulla l’azione di un altro giocatore (può bloccare quasi tutte le carte)")] * 5
+         cards += [Card(CardType.FAVOR, "Favor", "Costringe un altro giocatore a consegnarti una carta a scelta casuale")] * 10
+         cards += [Card(CardType.CAT, "Cat", "Carte con illustrazioni di gatti; senza effetti speciali, ma usabili per coppie/combos")] * 24
 
-       deck = Deck(cards)
-       deck.shuffle
-       return deck
+         deck = Deck(cards)
+         deck.shuffle()
+         return deck
 
 
     #Mischia le carte in modo casuale.
