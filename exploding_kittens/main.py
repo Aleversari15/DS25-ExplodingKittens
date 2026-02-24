@@ -1,1 +1,0 @@
-print("Exploding Kittens avviato")
