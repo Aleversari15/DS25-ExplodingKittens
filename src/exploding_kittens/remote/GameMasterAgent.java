@@ -1,6 +1,7 @@
 package exploding_kittens.remote;
 
 import exploding_kittens.game.model.*;
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
@@ -12,7 +13,7 @@ public class GameMasterAgent extends Agent {
 
     private GameState gameState;
     private Deck deck;
-    private Map<String, Hand> playerHands;
+    private Map<String, Hand> playerHands;  // agentName → Hand
     private int expectedPlayers;
 
     @Override
@@ -20,24 +21,22 @@ public class GameMasterAgent extends Agent {
         Object[] args = getArguments();
         expectedPlayers = (args != null) ? Integer.parseInt(args[0].toString()) : 2;
 
-        gameState = new GameState();
-        deck = new Deck();
+        gameState   = new GameState();
+        deck        = new Deck();
         playerHands = new HashMap<>();
 
         System.out.println("GameMaster avviato, aspetto " + expectedPlayers + " giocatori...");
-
         addBehaviour(new WaitForPlayersBehaviour());
     }
 
-   //Aspetta i giocatori per iniziare il gioco
+    //Aspetta i giocatori
     private class WaitForPlayersBehaviour extends CyclicBehaviour {
-
         @Override
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
             ACLMessage msg = myAgent.receive(mt);
 
-            if (msg != null && msg.getContent().equals("JOIN")) {
+            if (msg != null && msg.getContent().equals(Messages.JOIN)) {
                 String playerName = msg.getSender().getName();
                 Player player = new Player(playerName, msg.getSender().getLocalName());
                 gameState.addPlayer(player);
@@ -48,7 +47,7 @@ public class GameMasterAgent extends Agent {
                 // Conferma al giocatore
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.CONFIRM);
-                reply.setContent("JOINED");
+                reply.setContent(Messages.JOINED);
                 send(reply);
 
                 // Se abbiamo tutti i giocatori, avvia la partita
@@ -62,12 +61,11 @@ public class GameMasterAgent extends Agent {
         }
     }
 
-   //Distribuisce le carte
+    //Distribuisce carte
     private class StartGameBehaviour extends OneShotBehaviour {
-
         @Override
         public void action() {
-            // Crea e mischia il mazzo (senza Exploding Kittens e senza Defuse)
+            // Crea il mazzo senza Exploding Kittens e senza Defuse, poi mischia
             List<Card> cards = CardFactory.createStandardDeck(expectedPlayers);
             cards.removeIf(c -> c.getType() == CardType.EXPLODING_KITTEN);
             cards.removeIf(c -> c.getType() == CardType.DEFUSE);
@@ -82,18 +80,18 @@ public class GameMasterAgent extends Agent {
                     hand.addCard(deck.removeTopCard());
                 }
 
-                // Invia la mano al PlayerAgent
+                // Invia la mano iniziale al PlayerAgent
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.addReceiver(new jade.core.AID(player.getAgentName(), true));
-                msg.setContent("HAND:" + serializeHand(hand));
+                msg.addReceiver(new AID(player.getAgentName(), true));
+                msg.setContent(Messages.HAND_INIT + serializeHand(hand));
                 send(msg);
             }
 
-            // Reinserisci gli Exploding Kittens nel mazzo
+            // Reinserisci gli Exploding Kittens nel mazzo in posizioni casuali
             for (int i = 0; i < expectedPlayers - 1; i++) {
                 deck.insertCard(
                         new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "You explode!"),
-                        new Random().nextInt(deck.size())
+                        new Random().nextInt(deck.size() + 1)
                 );
             }
 
@@ -102,9 +100,8 @@ public class GameMasterAgent extends Agent {
         }
     }
 
-  //Gestisce turno
+    //Notifica giocatore di turno
     private class ManageTurnBehaviour extends OneShotBehaviour {
-
         @Override
         public void action() {
             if (gameState.isGameOver()) {
@@ -115,14 +112,15 @@ public class GameMasterAgent extends Agent {
             Player current = gameState.getCurrentPlayer();
             System.out.println("Turno di: " + current.getNickname());
 
-            // Notifica tutti i giocatori del turno corrente
+            // Notifica tutti i giocatori
             for (Player p : gameState.getActivePlayers()) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.addReceiver(new jade.core.AID(p.getAgentName(), true));
+                msg.addReceiver(new AID(p.getAgentName(), true));
+
                 if (p.getAgentName().equals(current.getAgentName())) {
-                    msg.setContent("YOUR_TURN");
+                    msg.setContent(Messages.YOUR_TURN);
                 } else {
-                    msg.setContent("TURN:" + current.getNickname());
+                    msg.setContent(Messages.TURN_OF + current.getNickname());
                 }
                 send(msg);
             }
@@ -131,34 +129,37 @@ public class GameMasterAgent extends Agent {
         }
     }
 
-
-    //Gestisce azioni del giocatore di turno
+    //Gestisce azioni giocatore
     private class HandleActionBehaviour extends CyclicBehaviour {
-
         @Override
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
             ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
-                String content = msg.getContent();
+                String content   = msg.getContent();
                 String senderName = msg.getSender().getName();
-                Player current = gameState.getCurrentPlayer();
+                Player current   = gameState.getCurrentPlayer();
 
                 // Verifica che sia il turno del mittente
                 if (!senderName.equals(current.getAgentName())) {
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.DISCONFIRM);
-                    reply.setContent("NOT_YOUR_TURN");
+                    reply.setContent(Messages.NOT_YOUR_TURN);
                     send(reply);
                     return;
                 }
 
-                if (content.equals("DRAW")) {
+                if (content.equals(Messages.DRAW)) {
                     handleDraw(msg);
-                } else if (content.startsWith("PLAY:")) {
-                    handlePlayCard(msg, content.substring(5));
+                } else if (content.startsWith(Messages.PLAY)) {
+                    handlePlayCard(msg, content.substring(Messages.PLAY.length()));
+                } else if (content.startsWith(Messages.DEFUSE_PLAY)) {
+                    handleDefuse(msg);
+                } else if (content.equals(Messages.PLAYER_ELIMINATED)) {
+                    handleElimination(msg);
                 }
+
             } else {
                 block();
             }
@@ -166,20 +167,22 @@ public class GameMasterAgent extends Agent {
 
         private void handleDraw(ACLMessage msg) {
             Card drawn = deck.removeTopCard();
-            Hand hand = playerHands.get(msg.getSender().getName());
+            Hand hand  = playerHands.get(msg.getSender().getName());
 
             if (drawn.getType() == CardType.EXPLODING_KITTEN) {
                 // Informa il giocatore che ha pescato un Kitten
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.INFORM);
-                reply.setContent("DREW:EXPLODING_KITTEN");
+                reply.setContent(Messages.DREW_KITTEN);
                 send(reply);
-                // La risposta (Defuse o eliminazione) arriverà con un nuovo messaggio
+                // Attende la risposta (DEFUSE o PLAYER_ELIMINATED)
+
             } else {
                 hand.addCard(drawn);
+
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.INFORM);
-                reply.setContent("DREW:" + drawn.getType().name());
+                reply.setContent(Messages.DREW + drawn.getType().name());
                 send(reply);
 
                 // Fine turno
@@ -191,13 +194,12 @@ public class GameMasterAgent extends Agent {
 
         private void handlePlayCard(ACLMessage msg, String cardTypeName) {
             CardType type = CardType.valueOf(cardTypeName);
-            Hand hand = playerHands.get(msg.getSender().getName());
+            Hand hand     = playerHands.get(msg.getSender().getName());
 
-            // Verifica che il giocatore abbia la carta
             if (!hand.hasCardOfType(type)) {
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
-                reply.setContent("CARD_NOT_IN_HAND");
+                reply.setContent(Messages.CARD_NOT_IN_HAND);
                 send(reply);
                 return;
             }
@@ -205,16 +207,15 @@ public class GameMasterAgent extends Agent {
             hand.removeCard(hand.getCardOfType(type));
 
             switch (type) {
-                case SKIP -> handleSkip(msg);
-                case ATTACK -> handleAttack(msg);
-                case SHUFFLE -> handleShuffle(msg);
+                case SKIP          -> handleSkip(msg);
+                case ATTACK        -> handleAttack(msg);
+                case SHUFFLE       -> handleShuffle(msg);
                 case SEE_THE_FUTURE -> handleSeeTheFuture(msg);
-                case DEFUSE -> handleDefuse(msg);
-                case CAT_CARD -> handleCatCard(msg);
+                case CAT_CARD      -> handleCatCard(msg);
                 default -> {
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.DISCONFIRM);
-                    reply.setContent("INVALID_CARD");
+                    reply.setContent(Messages.CARD_NOT_IN_HAND);
                     send(reply);
                 }
             }
@@ -223,7 +224,7 @@ public class GameMasterAgent extends Agent {
         private void handleSkip(ACLMessage msg) {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent("SKIP_OK");
+            reply.setContent(Messages.SKIP_OK);
             send(reply);
 
             gameState.nextTurn();
@@ -234,7 +235,7 @@ public class GameMasterAgent extends Agent {
         private void handleAttack(ACLMessage msg) {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent("ATTACK_OK");
+            reply.setContent(Messages.ATTACK_OK);
             send(reply);
 
             gameState.nextTurn();
@@ -250,27 +251,27 @@ public class GameMasterAgent extends Agent {
 
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent("SHUFFLE_OK");
+            reply.setContent(Messages.SHUFFLE_OK);
             send(reply);
         }
 
         private void handleSeeTheFuture(ACLMessage msg) {
             List<Card> top3 = deck.peekTop(3);
-            StringBuilder sb = new StringBuilder("SEE_THE_FUTURE:");
+            StringBuilder sb = new StringBuilder(Messages.SEE_THE_FUTURE);
             for (Card c : top3) sb.append(c.getType().name()).append(",");
 
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.INFORM);
             reply.setContent(sb.toString());
             send(reply);
+            // See the Future non termina il turno
         }
 
         private void handleDefuse(ACLMessage msg) {
-            // Il giocatore ha usato il Defuse dopo aver pescato un Kitten
-            // Il contenuto include la posizione dove reinserire: "DEFUSE:3"
-            String[] parts = msg.getContent().split(":");
-            int position = Integer.parseInt(parts[1]);
-            position = Math.min(position, deck.size());
+            // Contenuto atteso: "DEFUSE:<position>"
+            String[] parts   = msg.getContent().split(":");
+            int position     = Integer.parseInt(parts[1]);
+            position         = Math.min(position, deck.size());
 
             deck.insertCard(
                     new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "You explode!"),
@@ -279,11 +280,10 @@ public class GameMasterAgent extends Agent {
 
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent("DEFUSED");
+            reply.setContent(Messages.DEFUSED);
             send(reply);
 
-            // Notifica tutti
-            broadcastToAll("INFORM", msg.getSender().getLocalName() + " ha defusato il Kitten!");
+            broadcastToAll(msg.getSender().getLocalName() + " ha defusato il Kitten!");
 
             gameState.nextTurn();
             myAgent.removeBehaviour(this);
@@ -291,46 +291,66 @@ public class GameMasterAgent extends Agent {
         }
 
         private void handleCatCard(ACLMessage msg) {
-            // Il contenuto include il target: "CAT_CARD:targetAgentName"
+            // Contenuto atteso: "CAT_CARD:<targetAgentName>"
             String[] parts = msg.getContent().split(":");
             if (parts.length < 2) {
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
-                reply.setContent("MISSING_TARGET");
+                reply.setContent(Messages.MISSING_TARGET);
                 send(reply);
                 return;
             }
 
             String targetName = parts[1];
-            Hand targetHand = playerHands.get(targetName);
+            Hand targetHand   = playerHands.get(targetName);
 
             if (targetHand == null || targetHand.size() == 0) {
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
-                reply.setContent("INVALID_TARGET");
+                reply.setContent(Messages.INVALID_TARGET);
                 send(reply);
                 return;
             }
 
-            // Ruba carta casuale
+            // Ruba una carta casuale dal target
             int randomIndex = new Random().nextInt(targetHand.size());
-            Card stolen = targetHand.getCards().get(randomIndex);
+            Card stolen     = targetHand.getCards().get(randomIndex);
             targetHand.removeCard(stolen);
             playerHands.get(msg.getSender().getName()).addCard(stolen);
 
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent("STOLEN:" + stolen.getType().name());
+            reply.setContent(Messages.STOLEN + stolen.getType().name());
             send(reply);
+
+            // Notifica il target della carta rubata
+            ACLMessage notifyTarget = new ACLMessage(ACLMessage.INFORM);
+            notifyTarget.addReceiver(new AID(targetName, true));
+            notifyTarget.setContent(Messages.STOLEN + stolen.getType().name());
+            send(notifyTarget);
+        }
+
+        private void handleElimination(ACLMessage msg) {
+            Player eliminated = findPlayerByAgentName(msg.getSender().getName());
+            if (eliminated != null) {
+                gameState.removePlayer(eliminated);
+                broadcastToAll(eliminated.getNickname() + " è stato eliminato!");
+                System.out.println(eliminated.getNickname() + " eliminato.");
+            }
+
+            if (gameState.isGameOver()) {
+                announceWinner();
+            } else {
+                myAgent.removeBehaviour(this);
+                addBehaviour(new ManageTurnBehaviour());
+            }
         }
     }
 
-
-    private void broadcastToAll(String performative, String content) {
-        int perf = performative.equals("INFORM") ? ACLMessage.INFORM : ACLMessage.INFORM;
+    private void broadcastToAll(String content) {
         for (Player p : gameState.getActivePlayers()) {
-            ACLMessage msg = new ACLMessage(perf);
-            msg.addReceiver(new jade.core.AID(p.getAgentName(), true));
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.addReceiver(new AID(p.getAgentName(), true));
             msg.setContent(content);
             send(msg);
         }
@@ -338,8 +358,17 @@ public class GameMasterAgent extends Agent {
 
     private void announceWinner() {
         Player winner = gameState.getWinner();
-        broadcastToAll("INFORM", "WINNER:" + winner.getNickname());
-        System.out.println("Vincitore: " + winner.getNickname());
+        if (winner != null) {
+            broadcastToAll(Messages.WINNER + winner.getNickname());
+            System.out.println("Vincitore: " + winner.getNickname());
+        }
+    }
+
+    private Player findPlayerByAgentName(String agentName) {
+        return gameState.getActivePlayers().stream()
+                .filter(p -> p.getAgentName().equals(agentName))
+                .findFirst()
+                .orElse(null);
     }
 
     private String serializeHand(Hand hand) {
