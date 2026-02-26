@@ -18,10 +18,7 @@ public class GameBootstrap {
 
     }
 
-    public List<Player> getPlayers() {
-        return Collections.unmodifiableList(players);
-    }
-    public Deck getDeck() {
-        return deck;
+    public GameState buildGame(){
+        return new GameState(deck, players);
     }
 }
