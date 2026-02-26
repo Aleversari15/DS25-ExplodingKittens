@@ -11,6 +11,10 @@ public class Deck {
         this.cards = new ArrayList<>();
     }
 
+    public void shuffle() {
+        Collections.shuffle(cards);
+    }
+
     public void addCard(Card card) {
         cards.add(card);
     }
