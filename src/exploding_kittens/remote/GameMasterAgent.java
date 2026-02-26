@@ -1,6 +1,7 @@
 package exploding_kittens.remote;
 
 import exploding_kittens.game.model.*;
+import exploding_kittens.game.model.DeckBuilder;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -65,12 +66,8 @@ public class GameMasterAgent extends Agent {
     private class StartGameBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
-            // Crea il mazzo senza Exploding Kittens e senza Defuse, poi mischia
-            List<Card> cards = CardFactory.createStandardDeck(expectedPlayers);
-            cards.removeIf(c -> c.getType() == CardType.EXPLODING_KITTEN);
-            cards.removeIf(c -> c.getType() == CardType.DEFUSE);
-            Collections.shuffle(cards);
-            deck.setCards(cards);
+            // GameBootstrap prepara il mazzo base: senza Exploding Kittens, senza Defuse, già mischiato
+            deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
 
             // Distribuisci 1 Defuse + 4 carte a ciascun giocatore
             for (Player player : gameState.getActivePlayers()) {

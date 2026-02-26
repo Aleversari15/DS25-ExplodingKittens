@@ -5,13 +5,11 @@ import java.util.List;
 
 public class GameState {
     private final List<Player> activePlayers;
-    private final Deck deck;
     private int currentPlayerIndex;
     private int turnsToPlay; //Serve per gestire i turni quando vengono giocate carte Attack
 
-    public GameState(Deck deck, List<Player> players) {
-        this.deck = deck;
-        this.activePlayers = new ArrayList<>(players);
+    public GameState() {
+        this.activePlayers = new ArrayList<>();
         this.currentPlayerIndex = 0;
         this.turnsToPlay = 1;
     }
@@ -56,7 +54,4 @@ public class GameState {
         return isGameOver() ? activePlayers.getFirst() : null;
     }
 
-    public Deck getDeck() {
-        return deck;
-    }
 }

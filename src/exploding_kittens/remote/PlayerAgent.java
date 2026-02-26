@@ -40,12 +40,12 @@ public class PlayerAgent extends Agent {
 
             AgentController hm = container.createNewAgent(
                     handManagerName,
-                    "exploding_kittens.remote.player.HandManagerAgent",
+                    "exploding_kittens.remote.HandManagerAgent",
                     new Object[]{ getAID() }
             );
             AgentController kd = container.createNewAgent(
                     kittenDefenseName,
-                    "exploding_kittens.remote.player.KittenDefenseAgent",
+                    "exploding_kittens.remote.KittenDefenseAgent",
                     new Object[]{ getAID(), handManagerAID }
             );
 
