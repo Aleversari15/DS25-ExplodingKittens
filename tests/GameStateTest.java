@@ -24,6 +24,7 @@ class GameStateTest {
         gameState.addPlayer(player3);
     }
 
+
     @Test
     void testNextPlayer() {
         assertEquals(gameState.getCurrentPlayer(), player1);
