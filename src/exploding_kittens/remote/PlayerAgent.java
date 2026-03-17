@@ -1,5 +1,6 @@
 package exploding_kittens.remote;
 
+import exploding_kittens.game.view.GameView;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -9,6 +10,8 @@ import jade.lang.acl.MessageTemplate;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class PlayerAgent extends Agent {
@@ -16,14 +19,14 @@ public class PlayerAgent extends Agent {
     private AID handManagerAID;
     private AID kittenDefenseAID;
     private String nickname;
+    private GameView view;
 
     @Override
     protected void setup() {
         Object[] args = getArguments();
         nickname = (args != null) ? args[0].toString() : getLocalName();
-
+        view = new GameView();
         startSubAgents();
-
         System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
     }
@@ -192,32 +195,53 @@ public class PlayerAgent extends Agent {
         }
     }
 
-    //Recupera la mano da HandManager
+    // Recupera la mano da HandManager e aspetta l'input dell'utente
     private class WaitForUserInputBehaviour extends CyclicBehaviour {
+        private boolean waitingForInput = false;
+
         @Override
         public void action() {
-            MessageTemplate mt = MessageTemplate.and(
-                    MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                    MessageTemplate.MatchSender(handManagerAID)
+            // Prima controlla se è arrivata la risposta dell'utente (dal thread separato)
+            MessageTemplate mtSelf = MessageTemplate.and(
+                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                    MessageTemplate.MatchSender(myAgent.getAID())
             );
-            ACLMessage msg = myAgent.receive(mt);
+            ACLMessage selfMsg = myAgent.receive(mtSelf);
 
-            if (msg != null && msg.getContent().startsWith(Messages.HAND_INIT)) {
-                String hand = msg.getContent().substring(Messages.HAND_INIT.length());
-                System.out.println("[" + nickname + "] La tua mano: " + hand);
-                System.out.println("Digita: DRAW | PLAY:<CARD_TYPE> | CAT_CARD:<targetAgent>");
-
-                Scanner scanner = new Scanner(System.in);
-                String input = scanner.nextLine().trim().toUpperCase();
-
+            if (selfMsg != null) {
+                // Input ricevuto: mandalo al GameMaster
                 ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
                 toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
-                toGM.setContent(input);
+                toGM.setContent(selfMsg.getContent());
                 send(toGM);
-
                 myAgent.removeBehaviour(this);
-            } else {
-                block();
+                return;
+            }
+
+            // Altrimenti aspetta la mano dall'HandManager
+            if (!waitingForInput) {
+                MessageTemplate mtHand = MessageTemplate.and(
+                        MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                        MessageTemplate.MatchSender(handManagerAID)
+                );
+                ACLMessage msg = myAgent.receive(mtHand);
+
+                if (msg != null && msg.getContent().startsWith(Messages.HAND_INIT)) {
+                    String hand = msg.getContent().substring(Messages.HAND_INIT.length());
+                    view.showHand(parseHand(hand));
+                    waitingForInput = true;
+
+                    // Legge l'input su un thread separato per non bloccare JADE
+                    new Thread(() -> {
+                        String input = view.askAction();
+                        ACLMessage self = new ACLMessage(ACLMessage.REQUEST);
+                        self.addReceiver(myAgent.getAID());
+                        self.setContent(input);
+                        myAgent.send(self);
+                    }).start();
+                } else {
+                    block();
+                }
             }
         }
     }
@@ -228,5 +252,14 @@ public class PlayerAgent extends Agent {
         msg.addReceiver(target);
         msg.setContent(content);
         send(msg);
+    }
+
+    private List<String> parseHand(String serialized) {
+        List<String> cards = new ArrayList<>();
+        if (serialized == null || serialized.isEmpty()) return cards;
+        for (String s : serialized.split(",")) {
+            if (!s.isEmpty()) cards.add(s.trim());
+        }
+        return cards;
     }
 }

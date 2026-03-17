@@ -100,7 +100,7 @@ public class GameView {
 
 
     public String askAction() {
-        System.out.println("\nCosa vuoi fare?");
+        System.out.println("\n Cosa vuoi fare?");
         System.out.println("  [D] Pesca una carta");
         System.out.println("  [P] Gioca una carta");
         System.out.print("> ");
@@ -117,7 +117,7 @@ public class GameView {
     }
 
     private String askCardToPlay() {
-        System.out.println("\nQuale carta vuoi giocare?");
+        System.out.println("\n Quale carta vuoi giocare?");
         System.out.println("  [1] Skip");
         System.out.println("  [2] Attack");
         System.out.println("  [3] Shuffle");
@@ -169,11 +169,11 @@ public class GameView {
     private String formatCard(String cardType) {
         return switch (cardType) {
             case "EXPLODING_KITTEN" -> "💣 Exploding Kitten";
-            case "DEFUSE"           -> "🛡️  Defuse";
-            case "SKIP"             -> "⏭️  Skip";
-            case "ATTACK"           -> "⚔️  Attack";
+            case "DEFUSE"           -> "🛡️ Defuse";
+            case "SKIP"             -> "⏭️ Skip";
+            case "ATTACK"           -> "⚔️ Attack";
             case "SHUFFLE"          -> "🔀 Shuffle";
-            case "SEE_THE_FUTURE"   -> "👁️  See the Future";
+            case "SEE_THE_FUTURE"   -> "👁️ See the Future";
             case "CAT_CARD"         -> "🐱 Cat Card";
             default                 -> cardType;
         };
