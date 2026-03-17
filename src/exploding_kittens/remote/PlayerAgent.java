@@ -11,9 +11,7 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
 
 public class PlayerAgent extends Agent {
 
