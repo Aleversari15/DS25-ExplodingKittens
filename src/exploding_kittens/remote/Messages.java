@@ -39,6 +39,11 @@ public final class Messages {
     public static final String ADD_CARD          = "ADD_CARD:";
     public static final String REMOVE_CARD       = "REMOVE_CARD:";
 
+    // Messaggi  da KittenDefenseAgent a PlayerAgent per la UI
+    public static final String SHOW_DEFUSE_USED      = "SHOW_DEFUSE_USED";
+    public static final String SHOW_ELIMINATED       = "SHOW_ELIMINATED";
+    public static final String ASK_DEFUSE_POSITION   = "ASK_DEFUSE_POSITION";
+
     //Messaggi PlayerAgent- KittenDefenseAgent
     public static final String KITTEN_DRAWN      = "EXPLODING_KITTEN_DRAWN";
     public static final String PLAYER_ELIMINATED = "PLAYER_ELIMINATED";

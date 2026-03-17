@@ -50,7 +50,7 @@ public class KittenDefenseAgent extends Agent {
         }
     }
 
-    //Aspettta risposta da HandManager
+    // Aspetta risposta da HandManager
     private class WaitForDefuseCheckBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
@@ -61,14 +61,17 @@ public class KittenDefenseAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
-                String content = msg.getContent();
                 myAgent.removeBehaviour(this);
-
-                if (content.equals(Messages.HAS_DEFUSE_YES)) {
+                if (msg.getContent().equals(Messages.HAS_DEFUSE_YES)) {
                     addBehaviour(new UseDefuseBehaviour());
-                } else if (content.equals(Messages.HAS_DEFUSE_NO)) {
-                    // Nessun Defuse: il giocatore è eliminato
-                    System.out.println("KittenDefenseAgent: nessun Defuse disponibile.");
+                } else if (msg.getContent().equals(Messages.HAS_DEFUSE_NO)) {
+                    // Chiede al PlayerAgent di mostrare il messaggio di eliminazione
+                    ACLMessage notify = new ACLMessage(ACLMessage.INFORM);
+                    notify.addReceiver(playerAgentAID);
+                    notify.setContent(Messages.SHOW_ELIMINATED);
+                    send(notify);
+
+                    // Comunica l'eliminazione al PlayerAgent
                     ACLMessage eliminated = new ACLMessage(ACLMessage.INFORM);
                     eliminated.addReceiver(playerAgentAID);
                     eliminated.setContent(Messages.PLAYER_ELIMINATED);
@@ -80,26 +83,48 @@ public class KittenDefenseAgent extends Agent {
         }
     }
 
-    //usa Defuse
+    // Usa il Defuse e chiede la posizione al PlayerAgent
     private class UseDefuseBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
-            // Chiede all'HandManager di rimuovere il Defuse dalla mano
+            // Rimuove il Defuse dalla mano tramite HandManager
             ACLMessage useDefuse = new ACLMessage(ACLMessage.INFORM);
             useDefuse.addReceiver(handManagerAID);
             useDefuse.setContent(Messages.USE_DEFUSE);
             send(useDefuse);
 
-            // Chiede all'utente dove reinserire il Kitten nel mazzo
-            System.out.println("Hai un Defuse! In che posizione vuoi reinserire il Kitten? (0 = cima del mazzo)");
-            Scanner scanner = new Scanner(System.in);
-            int position = scanner.nextInt();
+            // Chiede al PlayerAgent di raccogliere la posizione dall'utente
+            ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
+            ask.addReceiver(playerAgentAID);
+            ask.setContent(Messages.ASK_DEFUSE_POSITION);
+            send(ask);
 
-            // Comunica la mossa al PlayerAgent che la inoltrerà al GameMaster
-            ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
-            defuse.addReceiver(playerAgentAID);
-            defuse.setContent(Messages.DEFUSE_PLAY + position);
-            send(defuse);
+            // Aspetta la risposta con la posizione
+            addBehaviour(new WaitForDefusePositionBehaviour());
+        }
+    }
+
+    // Aspetta la posizione dal PlayerAgent e la inoltra al GameMaster
+    private class WaitForDefusePositionBehaviour extends CyclicBehaviour {
+        @Override
+        public void action() {
+            MessageTemplate mt = MessageTemplate.and(
+                    MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                    MessageTemplate.MatchSender(playerAgentAID)
+            );
+            ACLMessage msg = myAgent.receive(mt);
+
+            if (msg != null && msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
+                // Inoltra la mossa al PlayerAgent che la manderà al GameMaster
+                ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
+                defuse.addReceiver(playerAgentAID);
+                defuse.setContent(msg.getContent());
+                send(defuse);
+
+                myAgent.removeBehaviour(this);
+            } else {
+                block();
+            }
         }
     }
 }

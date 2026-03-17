@@ -11,6 +11,7 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -92,9 +93,14 @@ public class PlayerAgent extends Agent {
 
     //smista msg
     private class ListenFromGameMasterBehaviour extends CyclicBehaviour {
+        private boolean waitingForInput = false;
         @Override
         public void action() {
-            ACLMessage msg = myAgent.receive();
+            // Esclude i messaggi che arrivano dall'agente stesso
+            MessageTemplate mt = MessageTemplate.not(
+                    MessageTemplate.MatchSender(myAgent.getAID())
+            );
+            ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
                 String content = msg.getContent();
@@ -102,6 +108,21 @@ public class PlayerAgent extends Agent {
 
                 if (senderLocal.equals("GameMaster")) {
                     dispatchFromGameMaster(content);
+                } else if (msg.getSender().equals(handManagerAID)) {
+                    // Risposta HAND_INIT dall'HandManager
+                    if (content.startsWith(Messages.HAND_INIT) && !waitingForInput) {
+                        String hand = content.substring(Messages.HAND_INIT.length());
+                        view.showHand(parseHand(hand));
+                        waitingForInput = true;
+
+                        new Thread(() -> {
+                            String input = view.askAction();
+                            ACLMessage self = new ACLMessage(ACLMessage.REQUEST);
+                            self.addReceiver(myAgent.getAID());
+                            self.setContent(input);
+                            myAgent.send(self);
+                        }).start();
+                    }
                 } else {
                     dispatchFromSubAgent(content);
                 }
@@ -134,6 +155,7 @@ public class PlayerAgent extends Agent {
 
             } else if (content.startsWith(Messages.SEE_THE_FUTURE)) {
                 System.out.println("[" + nickname + "] Prossime 3 carte: " + content.substring(Messages.SEE_THE_FUTURE.length()));
+                addBehaviour(new AskHandThenPlayBehaviour());
 
             } else if (content.startsWith(Messages.STOLEN)) {
                 String cardType = content.substring(Messages.STOLEN.length());
@@ -151,6 +173,7 @@ public class PlayerAgent extends Agent {
 
             } else if (content.equals(Messages.SHUFFLE_OK)) {
                 System.out.println("[" + nickname + "] Mazzo mischiato.");
+                addBehaviour(new AskHandThenPlayBehaviour());
 
             } else if (content.equals(Messages.CARD_NOT_IN_HAND)) {
                 System.out.println("[" + nickname + "] Carta non presente in mano!");
@@ -175,13 +198,27 @@ public class PlayerAgent extends Agent {
                 toGM.setContent(content);
                 send(toGM);
 
+            } else if (content.equals(Messages.SHOW_DEFUSE_USED)) {
+                view.showDefuseUsed();
+
+            } else if (content.equals(Messages.SHOW_ELIMINATED)) {
+                view.showYouAreEliminated();
+
+            } else if (content.equals(Messages.ASK_DEFUSE_POSITION)) {
+                // Raccoglie la posizione su thread separato e la rimanda al KittenDefenseAgent
+                new Thread(() -> {
+                    int position = view.askDefusePosition(0);
+                    ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
+                    reply.addReceiver(kittenDefenseAID);
+                    reply.setContent(Messages.DEFUSE_PLAY + position);
+                    myAgent.send(reply);
+                }).start();
+
             } else if (content.equals(Messages.PLAYER_ELIMINATED)) {
-                // Notifica il GameMaster che questo giocatore è eliminato
                 ACLMessage toGM = new ACLMessage(ACLMessage.INFORM);
                 toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
                 toGM.setContent(Messages.PLAYER_ELIMINATED);
                 send(toGM);
-                System.out.println("[" + nickname + "] Sei stato eliminato!");
             }
         }
     }
