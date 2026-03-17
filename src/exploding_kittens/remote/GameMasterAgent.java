@@ -21,7 +21,6 @@ public class GameMasterAgent extends Agent {
     protected void setup() {
         Object[] args = getArguments();
         expectedPlayers = (args != null) ? Integer.parseInt(args[0].toString()) : 2;
-
         gameState   = new GameState();
         deck        = new Deck();
         playerHands = new HashMap<>();
@@ -72,7 +71,7 @@ public class GameMasterAgent extends Agent {
             // Distribuisci 1 Defuse + 4 carte a ciascun giocatore
             for (Player player : gameState.getActivePlayers()) {
                 Hand hand = playerHands.get(player.getAgentName());
-                hand.addCard(new Card(CardType.DEFUSE, "Defuse", "Neutralizes an Exploding Kitten."));
+                hand.addCard(new Card(CardType.DEFUSE, "Defuse", "Annulla un Exploding Kitten."));
                 for (int i = 0; i < 4; i++) {
                     hand.addCard(deck.removeTopCard());
                 }
@@ -84,10 +83,10 @@ public class GameMasterAgent extends Agent {
                 send(msg);
             }
 
-            // Reinserisci gli Exploding Kittens nel mazzo in posizioni casuali
+            // Reinserisce gli Exploding Kittens nel mazzo in posizioni casuali
             for (int i = 0; i < expectedPlayers - 1; i++) {
                 deck.insertCard(
-                        new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "You explode!"),
+                        new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
                         new Random().nextInt(deck.size() + 1)
                 );
             }
@@ -265,13 +264,12 @@ public class GameMasterAgent extends Agent {
         }
 
         private void handleDefuse(ACLMessage msg) {
-            // Contenuto atteso: "DEFUSE:<position>"
             String[] parts   = msg.getContent().split(":");
             int position     = Integer.parseInt(parts[1]);
             position         = Math.min(position, deck.size());
 
             deck.insertCard(
-                    new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "You explode!"),
+                    new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
                     position
             );
 
@@ -280,7 +278,7 @@ public class GameMasterAgent extends Agent {
             reply.setContent(Messages.DEFUSED);
             send(reply);
 
-            broadcastToAll(msg.getSender().getLocalName() + " ha defusato il Kitten!");
+            broadcastToAll(msg.getSender().getLocalName() + " Exploding Kitten neutralizzato con carta Defuse!");
 
             gameState.nextTurn();
             myAgent.removeBehaviour(this);
@@ -288,7 +286,6 @@ public class GameMasterAgent extends Agent {
         }
 
         private void handleCatCard(ACLMessage msg) {
-            // Contenuto atteso: "CAT_CARD:<targetAgentName>"
             String[] parts = msg.getContent().split(":");
             if (parts.length < 2) {
                 ACLMessage reply = msg.createReply();
