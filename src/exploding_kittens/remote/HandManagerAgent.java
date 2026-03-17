@@ -51,6 +51,9 @@ public class HandManagerAgent extends Agent {
 
                 } else if (content.equals(Messages.GET_HAND)) {
                     // Il PlayerAgent chiede la mano da mostrare all'utente
+                    System.out.println("DEBUG HandManager " + getLocalName() +
+                            " -> rispondo a: " + playerAgentAID.getLocalName() +
+                            " con mano: " + serializeHand());
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(playerAgentAID);
                     reply.setContent(Messages.HAND_INIT + serializeHand());
