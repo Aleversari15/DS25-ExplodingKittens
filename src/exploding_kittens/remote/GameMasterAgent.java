@@ -7,7 +7,6 @@ import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,46 +58,24 @@ public class GameMasterAgent extends Agent {
     }
 
 
+    /**
+     * Tramite il DeckBuilder viene costruito il mazzo e vengono distribuite le carte ai giocatori.
+     */
     private class StartGameBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
             deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
+            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+            DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
 
-            // Distribuisce 1 Defuse + 4 carte a ciascun giocatore
             for (Player player : gameState.getActivePlayers()) {
-                List<Card> hand = new ArrayList<>();
-                hand.add(new Card(CardType.DEFUSE, "Defuse", "Annulla un Exploding Kitten."));
-                for (int i = 0; i < 4; i++) {
-                    hand.add(deck.removeTopCard());
-                }
-
-                String serialized = hand.stream()
-                        .map(c -> c.getType().name())
-                        .collect(Collectors.joining(","));
-
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
                 msg.addReceiver(new AID(player.getAgentName(), true));
-                msg.setContent(Messages.HAND_INIT + serialized);
+                msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
                 send(msg);
             }
 
-            // Inserimento  degli Exploding Kittens nel mazzo
-            for (int i = 0; i < expectedPlayers - 1; i++) {
-                deck.insertCard(
-                        new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
-                        new Random().nextInt(deck.size() + 1)
-                );
-            }
-
             System.out.println("Partita avviata!");
-            //TODO: verificare se il delay è ancora necessario
-            //Piccolo delay aggiunto per attendere che gli hand manager processino l'HAND_INIT altrimenti alcuni giocatori potrebbero non vedere le carte in mano all'avvio del gioco
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
             addBehaviour(new ManageTurnBehaviour());
         }
     }
