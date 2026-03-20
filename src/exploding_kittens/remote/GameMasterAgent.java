@@ -17,6 +17,7 @@ public class GameMasterAgent extends Agent {
     private Deck deck;
     private int expectedPlayers;
 
+    private static final String CAT_LOG = "[GameMaster - CAT_CARD] ";
     @Override
     protected void setup() {
         Object[] args = getArguments();
@@ -130,28 +131,31 @@ public class GameMasterAgent extends Agent {
         private ACLMessage pendingAction   = null; // azione in attesa della mano
         private String     pendingCatTarget = null; // target Cat Card in attesa della mano del target
 
+
         @Override
         public void action() {
             ACLMessage msg = myAgent.receive();
 
             if (msg != null) {
-                String content    = msg.getContent();
-                String senderName = msg.getSender().getName();
-                Player current    = gameState.getCurrentPlayer();
+                String content = msg.getContent();
 
-                if (content.startsWith(Messages.HAND_RESPONSE) && pendingAction != null
-                        && pendingCatTarget == null) {
+                if (content.startsWith(Messages.HAND_RESPONSE)) {
                     String serializedHand = content.substring(Messages.HAND_RESPONSE.length());
-                    processActionWithHand(pendingAction, serializedHand);
-                    pendingAction = null;
-                    return;
-                }
 
-                if (content.startsWith(Messages.HAND_RESPONSE) && pendingCatTarget != null) {
-                    String serializedHand = content.substring(Messages.HAND_RESPONSE.length());
-                    processCatCardWithTargetHand(pendingAction, serializedHand);
-                    pendingAction    = null;
-                    pendingCatTarget = null;
+                    if (pendingCatTarget != null) {
+                        if (pendingAction != null) {
+                            processCatCardWithTargetHand(pendingAction, serializedHand);
+                        }
+                        pendingAction = null;
+                        pendingCatTarget = null;
+                    }
+                    else if (pendingAction != null) {
+                        processActionWithHand(pendingAction, serializedHand);
+
+                        if (pendingCatTarget == null) {
+                            pendingAction = null;
+                        }
+                    }
                     return;
                 }
 
@@ -160,7 +164,8 @@ public class GameMasterAgent extends Agent {
                     return;
                 }
 
-                if (!senderName.equals(current.getAgentName())) {
+                Player current = gameState.getCurrentPlayer();
+                if (!msg.getSender().getName().equals(current.getAgentName())) {
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.DISCONFIRM);
                     reply.setContent(Messages.NOT_YOUR_TURN);
@@ -170,18 +175,14 @@ public class GameMasterAgent extends Agent {
 
                 if (content.equals(Messages.DRAW)) {
                     handleDraw(msg);
-
-                } else if (content.startsWith(Messages.PLAY)
-                        || content.startsWith(Messages.CAT_CARD_PLAY)) {
-                    pendingAction = msg;
+                } else if (content.startsWith(Messages.PLAY) || content.startsWith(Messages.CAT_CARD_PLAY)) {
+                    pendingAction = msg; // Salva l'azione
                     ACLMessage query = new ACLMessage(ACLMessage.REQUEST);
-                    query.addReceiver(new AID(current.getAgentName(), true));
+                    query.addReceiver(msg.getSender());
                     query.setContent(Messages.REQUEST_HAND);
                     send(query);
-
                 } else if (content.startsWith(Messages.DEFUSE_PLAY)) {
                     handleDefuse(msg);
-
                 } else if (content.equals(Messages.PLAYER_ELIMINATED)) {
                     handleElimination(msg);
                 }
@@ -190,7 +191,6 @@ public class GameMasterAgent extends Agent {
                 block();
             }
         }
-
         private void processActionWithHand(ACLMessage originalMsg, String serializedHand) {
             String content = originalMsg.getContent();
 
@@ -199,9 +199,11 @@ public class GameMasterAgent extends Agent {
                     .map(CardType::valueOf)
                     .collect(Collectors.toList());
 
+
             if (content.startsWith(Messages.PLAY)) {
                 String cardTypeName = content.substring(Messages.PLAY.length());
                 CardType type = CardType.valueOf(cardTypeName);
+
 
                 if (!hand.contains(type)) {
                     ACLMessage reply = originalMsg.createReply();
@@ -218,7 +220,9 @@ public class GameMasterAgent extends Agent {
                     case ATTACK         -> handleAttack(originalMsg);
                     case SHUFFLE        -> handleShuffle(originalMsg);
                     case SEE_THE_FUTURE -> handleSeeTheFuture(originalMsg);
-                    case CAT_CARD       -> prepareCatCard(originalMsg);
+                    case CAT_CARD       -> {
+                        prepareCatCard(originalMsg);
+                    }
                     default -> {
                         ACLMessage reply = originalMsg.createReply();
                         reply.setPerformative(ACLMessage.DISCONFIRM);
@@ -228,23 +232,27 @@ public class GameMasterAgent extends Agent {
                 }
 
             } else if (content.startsWith(Messages.CAT_CARD_PLAY)) {
-                // Verifica che il giocatore abbia almeno 2 Cat Card
                 long catCount = hand.stream().filter(t -> t == CardType.CAT_CARD).count();
+                System.out.println(CAT_LOG + "CAT_CARD_PLAY catCount=" + catCount);
                 if (catCount < 2) {
+                    System.out.println(CAT_LOG + "Meno di 2 CAT_CARD -> DISCONFIRM");
                     ACLMessage reply = originalMsg.createReply();
                     reply.setPerformative(ACLMessage.DISCONFIRM);
                     reply.setContent(Messages.CARD_NOT_IN_HAND);
                     send(reply);
                     return;
                 }
+                System.out.println(CAT_LOG + "CAT_CARD_PLAY valido -> prepareCatCard");
                 prepareCatCard(originalMsg);
             }
         }
 
         // Cat Card: chiede la mano del target per rubare
         private void prepareCatCard(ACLMessage originalMsg) {
+            System.out.println(CAT_LOG + "prepareCatCard content=" + originalMsg.getContent());
             String[] parts = originalMsg.getContent().split(":");
             if (parts.length < 2) {
+                System.out.println(CAT_LOG + "Target mancante");
                 ACLMessage reply = originalMsg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
                 reply.setContent(Messages.MISSING_TARGET);
@@ -253,6 +261,8 @@ public class GameMasterAgent extends Agent {
             }
 
             String targetLocalName = parts[1];
+            System.out.println(CAT_LOG + "target richiesto=" + targetLocalName);
+
             Player target = gameState.getActivePlayers().stream()
                     .filter(p -> p.getNickname().contains(targetLocalName)
                             || p.getAgentName().contains(targetLocalName))
@@ -260,6 +270,7 @@ public class GameMasterAgent extends Agent {
                     .orElse(null);
 
             if (target == null) {
+                System.out.println(CAT_LOG + "Target non valido/non trovato");
                 ACLMessage reply = originalMsg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
                 reply.setContent(Messages.INVALID_TARGET);
@@ -270,18 +281,27 @@ public class GameMasterAgent extends Agent {
             pendingAction    = originalMsg;
             pendingCatTarget = target.getAgentName();
 
+            System.out.println(CAT_LOG + "Target trovato=" + pendingCatTarget + " -> REQUEST_HAND al target");
+
             ACLMessage query = new ACLMessage(ACLMessage.REQUEST);
             query.addReceiver(new AID(target.getAgentName(), true));
             query.setContent(Messages.REQUEST_HAND);
             send(query);
+
+            System.out.println(CAT_LOG + "REQUEST_HAND inviato al target " + target.getAgentName());
         }
 
         private void processCatCardWithTargetHand(ACLMessage originalMsg, String serializedTargetHand) {
+            System.out.println(CAT_LOG + "processCatCardWithTargetHand handRaw=" + serializedTargetHand + " target=" + pendingCatTarget);
+
             List<String> targetCards = Arrays.stream(serializedTargetHand.split(","))
                     .filter(s -> !s.isEmpty())
                     .collect(Collectors.toList());
 
+            System.out.println(CAT_LOG + "targetCards=" + targetCards);
+
             if (targetCards.isEmpty()) {
+                System.out.println(CAT_LOG + "Target senza carte -> DISCONFIRM");
                 ACLMessage reply = originalMsg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
                 reply.setContent(Messages.INVALID_TARGET);
@@ -289,41 +309,40 @@ public class GameMasterAgent extends Agent {
                 return;
             }
 
-            // Sceglie carta casuale dal target
             String stolenType = targetCards.get(new Random().nextInt(targetCards.size()));
+            System.out.println(CAT_LOG + "Carta rubata=" + stolenType);
 
-            // Rimuove 2 Cat Card dal ladro
             notifyRemoveCard(originalMsg.getSender(), "CAT_CARD");
             notifyRemoveCard(originalMsg.getSender(), "CAT_CARD");
 
-            // Rimuove la carta rubata dal target e la aggiunge al ladro
             ACLMessage removeFromTarget = new ACLMessage(ACLMessage.INFORM);
             removeFromTarget.addReceiver(new AID(pendingCatTarget, true));
             removeFromTarget.setContent(Messages.REMOVE_CARD + stolenType);
             send(removeFromTarget);
+            System.out.println(CAT_LOG + "REMOVE_CARD inviato al target");
 
             ACLMessage addToThief = new ACLMessage(ACLMessage.INFORM);
             addToThief.addReceiver(originalMsg.getSender());
             addToThief.setContent(Messages.ADD_CARD + stolenType);
             send(addToThief);
-
+            System.out.println(CAT_LOG + "ADD_CARD inviato al ladro");
 
             ACLMessage reply = originalMsg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
             reply.setContent(Messages.YOU_STOLE + stolenType);
             send(reply);
-
+            System.out.println(CAT_LOG + "CONFIRM inviato al ladro");
 
             ACLMessage notifyTarget = new ACLMessage(ACLMessage.INFORM);
             notifyTarget.addReceiver(new AID(pendingCatTarget, true));
             notifyTarget.setContent(Messages.STOLEN_FROM_YOU + stolenType);
             send(notifyTarget);
+            System.out.println(CAT_LOG + "Notifica furto inviata al target");
 
-            // Refresh mano per entrambi
             notifyRefresh(originalMsg.getSender());
             notifyRefresh(new AID(pendingCatTarget, true));
+            System.out.println(CAT_LOG + "REFRESH inviato a ladro e target");
         }
-
 
         private void handleDraw(ACLMessage msg) {
             Card drawn = deck.removeTopCard();
@@ -486,3 +505,4 @@ public class GameMasterAgent extends Agent {
                 .orElse(null);
     }
 }
+
