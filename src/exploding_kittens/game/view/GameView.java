@@ -477,7 +477,7 @@ public class GameView {
         titleLabel.setFont(new Font("Georgia", Font.BOLD, 13));
         titleLabel.setForeground(ACCENT_RED);
 
-        JLabel msgLabel = new JLabel("In che posizione vuoi reinserirlo nel mazzo?");
+        JLabel msgLabel = new JLabel("Per fortuna hai un Defuse e non esplodi. In che posizione vuoi reinserire il Kitten nel mazzo?");
         msgLabel.setFont(FONT_LABEL);
         msgLabel.setForeground(TEXT_PRIMARY);
 
