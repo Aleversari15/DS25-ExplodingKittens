@@ -11,8 +11,10 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+//TODO: rimuovere tutti i log al termine dei test
 public class PlayerAgent extends Agent {
 
     private AID handManagerAID;
@@ -103,22 +105,24 @@ public class PlayerAgent extends Agent {
             if (msg != null) {
                 String content = msg.getContent();
                 String senderLocal = msg.getSender().getLocalName();
+                System.out.println("DEBUG ricevuto da: '" + senderLocal + "' | content: '" + content + "' | waitingForInput: " + waitingForInput);
 
-                if (senderLocal.equals("GameMaster")) {
+                if (senderLocal.startsWith("GameMaster")) {
                     dispatchFromGameMaster(content);
-                } else if (msg.getSender().equals(handManagerAID)) {
+                } else if (msg.getSender().getLocalName().equals(handManagerAID.getLocalName())) {
                     // Risposta HAND_INIT dall'HandManager
                     if (content.startsWith(Messages.HAND_INIT) && !waitingForInput) {
+                        waitingForInput = true;
                         String hand = content.substring(Messages.HAND_INIT.length());
                         view.showHand(parseHand(hand));
-                        waitingForInput = true;
 
                         new Thread(() -> {
                             String input = view.askAction();
-                            ACLMessage self = new ACLMessage(ACLMessage.REQUEST);
-                            self.addReceiver(myAgent.getAID());
-                            self.setContent(input);
-                            myAgent.send(self);
+                            ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
+                            toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                            toGM.setContent(input);
+                            myAgent.send(toGM);
+                            waitingForInput = false;
                         }).start();
                     }
                 } else {
@@ -137,49 +141,70 @@ public class PlayerAgent extends Agent {
 
             } else if (content.equals(Messages.YOUR_TURN)) {
                 System.out.println("[" + nickname + "] È il tuo turno!");
-                addBehaviour(new AskHandThenPlayBehaviour());
+                view.showYourTurn();
+                waitingForInput = false;
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
 
             } else if (content.startsWith(Messages.TURN_OF)) {
                 System.out.println("[" + nickname + "] Turno di: " + content.substring(Messages.TURN_OF.length()));
+                view.showOtherPlayerTurn(content.substring(Messages.TURN_OF.length()));
 
             } else if (content.equals(Messages.DREW_KITTEN)) {
                 System.out.println("[" + nickname + "] Hai pescato un Exploding Kitten!");
+                view.showExplosion();
                 sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, Messages.KITTEN_DRAWN);
+
 
             } else if (content.startsWith(Messages.DREW)) {
                 String cardType = content.substring(Messages.DREW.length());
+                view.showCardDrawn(cardType);
                 sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, Messages.ADD_CARD + cardType);
                 System.out.println("[" + nickname + "] Hai pescato: " + cardType + ". Turno terminato.");
 
             } else if (content.startsWith(Messages.SEE_THE_FUTURE)) {
+                String[] cards = content.substring(Messages.SEE_THE_FUTURE.length()).split(",");
+                view.showSeeTheFuture(Arrays.asList(cards));
                 System.out.println("[" + nickname + "] Prossime 3 carte: " + content.substring(Messages.SEE_THE_FUTURE.length()));
-                addBehaviour(new AskHandThenPlayBehaviour());
+                waitingForInput = false; // See the future non termina il turno
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
 
             } else if (content.startsWith(Messages.STOLEN)) {
                 String cardType = content.substring(Messages.STOLEN.length());
                 System.out.println("[" + nickname + "] Ti è stata rubata: " + cardType);
+                view.showStolenCard(cardType);
                 sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, Messages.REMOVE_CARD + cardType);
 
             } else if (content.equals(Messages.DEFUSED)) {
                 System.out.println("[" + nickname + "] Kitten defusato con successo!");
+                view.showDefuseUsed();
 
             } else if (content.equals(Messages.SKIP_OK)) {
                 System.out.println("[" + nickname + "] Skip eseguito.");
+                view.showCardPlayed(nickname, "SKIP");
 
             } else if (content.equals(Messages.ATTACK_OK)) {
                 System.out.println("[" + nickname + "] Attack eseguito.");
+                view.showCardPlayed(nickname, "ATTACK");
 
             } else if (content.equals(Messages.SHUFFLE_OK)) {
                 System.out.println("[" + nickname + "] Mazzo mischiato.");
-                addBehaviour(new AskHandThenPlayBehaviour());
+                view.showShuffled();
+                waitingForInput = false; // Shuffle non termina il turno
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
 
             } else if (content.equals(Messages.CARD_NOT_IN_HAND)) {
                 System.out.println("[" + nickname + "] Carta non presente in mano!");
+                view.showCardNotInHand();
+
+                waitingForInput = false; // Carta non valida, riprovare
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
 
             } else if (content.equals(Messages.NOT_YOUR_TURN)) {
                 System.out.println("[" + nickname + "] Non è il tuo turno!");
+                view.showNotYourTurn();
 
             } else if (content.startsWith(Messages.WINNER)) {
+                view.showGameOver(content.substring(Messages.WINNER.length()));
                 System.out.println("[" + nickname + "] Vincitore: " + content.substring(Messages.WINNER.length()));
             }
         }
@@ -220,67 +245,6 @@ public class PlayerAgent extends Agent {
             }
         }
     }
-
-    //Chiede la mano da HandManager
-    private class AskHandThenPlayBehaviour extends OneShotBehaviour {
-        @Override
-        public void action() {
-            sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            addBehaviour(new WaitForUserInputBehaviour());
-        }
-    }
-
-    // Recupera la mano da HandManager e aspetta l'input dell'utente
-    private class WaitForUserInputBehaviour extends CyclicBehaviour {
-        private boolean waitingForInput = false;
-
-        @Override
-        public void action() {
-            // Prima controlla se è arrivata la risposta dell'utente (dal thread separato)
-            MessageTemplate mtSelf = MessageTemplate.and(
-                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                    MessageTemplate.MatchSender(myAgent.getAID())
-            );
-            ACLMessage selfMsg = myAgent.receive(mtSelf);
-
-            if (selfMsg != null) {
-                // Input ricevuto: mandalo al GameMaster
-                ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
-                toGM.setContent(selfMsg.getContent());
-                send(toGM);
-                myAgent.removeBehaviour(this);
-                return;
-            }
-
-            // Altrimenti aspetta la mano dall'HandManager
-            if (!waitingForInput) {
-                MessageTemplate mtHand = MessageTemplate.and(
-                        MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                        MessageTemplate.MatchSender(handManagerAID)
-                );
-                ACLMessage msg = myAgent.receive(mtHand);
-
-                if (msg != null && msg.getContent().startsWith(Messages.HAND_INIT)) {
-                    String hand = msg.getContent().substring(Messages.HAND_INIT.length());
-                    view.showHand(parseHand(hand));
-                    waitingForInput = true;
-
-                    // Legge l'input su un thread separato per non bloccare JADE
-                    new Thread(() -> {
-                        String input = view.askAction();
-                        ACLMessage self = new ACLMessage(ACLMessage.REQUEST);
-                        self.addReceiver(myAgent.getAID());
-                        self.setContent(input);
-                        myAgent.send(self);
-                    }).start();
-                } else {
-                    block();
-                }
-            }
-        }
-    }
-
 
     private void sendMsgToSubAgent(AID target, int performative, String content) {
         ACLMessage msg = new ACLMessage(performative);

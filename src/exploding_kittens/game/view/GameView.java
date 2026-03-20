@@ -58,7 +58,7 @@ public class GameView {
     private void loadCardImages() {
         // Mappa CardType -> nome file img
         Map<String, String> fileNames = new HashMap<>();
-        fileNames.put("EXPLODING_KITTEN", "ExplodingKittens.jpg");
+        fileNames.put("EXPLODING_KITTEN", "ExplodingKitten.jpg");
         fileNames.put("DEFUSE",           "Defuse.jpg");
         fileNames.put("SKIP",             "Skip.jpg");
         fileNames.put("ATTACK",           "Attack.jpg");
