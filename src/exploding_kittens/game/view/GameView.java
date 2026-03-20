@@ -160,16 +160,24 @@ public class GameView {
         JLabel handTitle = new JLabel("LA TUA MANO: ");
         handTitle.setFont(new Font("Georgia", Font.BOLD, 11));
         handTitle.setForeground(TEXT_MUTED);
-        handTitle.setBorder(new EmptyBorder(0, 0, 6, 0));
 
-        handPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        handPanel = new JPanel(new GridBagLayout());
         handPanel.setBackground(BG_DARK);
-        handPanel.setPreferredSize(new Dimension(0, 170));
+
+        JScrollPane handScroll = new JScrollPane(handPanel);
+        handScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        handScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        handScroll.setBorder(null);
+        handScroll.getViewport().setBackground(BG_DARK);
+        handScroll.setPreferredSize(new Dimension(0, 185));
+
+        // Velocità di scorrimento
+        handScroll.getHorizontalScrollBar().setUnitIncrement(16);
 
         JPanel handWrapper = new JPanel(new BorderLayout());
         handWrapper.setBackground(BG_DARK);
         handWrapper.add(handTitle, BorderLayout.NORTH);
-        handWrapper.add(handPanel, BorderLayout.CENTER);
+        handWrapper.add(handScroll, BorderLayout.CENTER);
 
         // Bottoni azione
         actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
@@ -337,9 +345,18 @@ public class GameView {
     public void showHand(List<String> cardNames) {
         SwingUtilities.invokeLater(() -> {
             handPanel.removeAll();
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridy = 0;
+            gbc.insets = new Insets(0, 4, 0, 4); // Spaziatura tra le carte
+            gbc.anchor = GridBagConstraints.CENTER;
+
             for (String card : cardNames) {
-                if (!card.isBlank()) handPanel.add(buildCardPanel(card.trim()));
+                if (!card.isBlank()) {
+                    handPanel.add(buildCardPanel(card.trim()), gbc);
+                }
             }
+
             handPanel.revalidate();
             handPanel.repaint();
             setActionsEnabled(true);
