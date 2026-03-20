@@ -397,9 +397,38 @@ public class GameView {
             turnLabel.setText("Sei eliminato");
             turnLabel.setForeground(ACCENT_RED);
             setActionsEnabled(false);
-            JOptionPane.showMessageDialog(frame,
-                    "Sei stato eliminato!\nNessun Defuse disponibile.",
-                    "Eliminato", JOptionPane.WARNING_MESSAGE);
+
+            JPanel panel = new JPanel(new BorderLayout(10, 10));
+            panel.setBackground(BG_PANEL);
+
+            Image kittenImg = cardImages.get("EXPLODING_KITTEN");
+            if (kittenImg != null) {
+                Image scaled = kittenImg.getScaledInstance(100, 130, Image.SCALE_SMOOTH);
+                JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+                imgLabel.setBorder(BorderFactory.createLineBorder(ACCENT_RED, 2));
+                panel.add(imgLabel, BorderLayout.WEST);
+            }
+
+            JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 6));
+            textPanel.setBackground(BG_PANEL);
+
+            JLabel titleLabel = new JLabel("SEI STATO ELIMINATO!");
+            titleLabel.setFont(new Font("Georgia", Font.BOLD, 14));
+            titleLabel.setForeground(ACCENT_RED);
+
+            JLabel msgLabel = new JLabel("Nessun Defuse disponibile.");
+            msgLabel.setFont(FONT_LABEL);
+            msgLabel.setForeground(TEXT_PRIMARY);
+
+            textPanel.add(titleLabel);
+            textPanel.add(msgLabel);
+            panel.add(textPanel, BorderLayout.CENTER);
+
+            UIManager.put("OptionPane.background", BG_PANEL);
+            UIManager.put("Panel.background", BG_PANEL);
+
+            JOptionPane.showMessageDialog(frame, panel,
+                    "Eliminato", JOptionPane.PLAIN_MESSAGE);
         });
     }
 
@@ -430,12 +459,65 @@ public class GameView {
     }
 
     public int askDefusePosition(int deckSize) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(BG_PANEL);
+
+        Image kittenImg = cardImages.get("EXPLODING_KITTEN");
+        if (kittenImg != null) {
+            Image scaled = kittenImg.getScaledInstance(100, 130, Image.SCALE_SMOOTH);
+            JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+            imgLabel.setBorder(BorderFactory.createLineBorder(ACCENT_RED, 2));
+            panel.add(imgLabel, BorderLayout.WEST);
+        }
+
+        JPanel rightPanel = new JPanel(new BorderLayout(6, 6));
+        rightPanel.setBackground(BG_PANEL);
+
+        JLabel titleLabel = new JLabel("!!! HAI PESCATO UN EXPLODING KITTEN !!!");
+        titleLabel.setFont(new Font("Georgia", Font.BOLD, 13));
+        titleLabel.setForeground(ACCENT_RED);
+
+        JLabel msgLabel = new JLabel("In che posizione vuoi reinserirlo nel mazzo?");
+        msgLabel.setFont(FONT_LABEL);
+        msgLabel.setForeground(TEXT_PRIMARY);
+
+        JLabel hintLabel = new JLabel("(0 = cima del mazzo)");
+        hintLabel.setFont(new Font("Georgia", Font.PLAIN, 11));
+        hintLabel.setForeground(TEXT_MUTED);
+
+        JTextField inputField = new JTextField("0", 5);
+        inputField.setFont(FONT_LABEL);
+        inputField.setBackground(BG_CARD);
+        inputField.setForeground(TEXT_PRIMARY);
+        inputField.setCaretColor(ACCENT_ORANGE);
+        inputField.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+
+        JPanel textPanel = new JPanel(new GridLayout(3, 1, 0, 4));
+        textPanel.setBackground(BG_PANEL);
+        textPanel.add(titleLabel);
+        textPanel.add(msgLabel);
+        textPanel.add(hintLabel);
+
+        rightPanel.add(textPanel, BorderLayout.NORTH);
+        rightPanel.add(inputField, BorderLayout.CENTER);
+        panel.add(rightPanel, BorderLayout.CENTER);
+
+        // Mostra il dialog dall'EDT e mette il risultato nella queue
         SwingUtilities.invokeLater(() -> {
-            String input = JOptionPane.showInputDialog(frame,
-                    "In che posizione vuoi reinserire il Kitten?\n(0 = cima del mazzo)",
-                    "Defuse", JOptionPane.QUESTION_MESSAGE);
-            inputQueue.offer("__POS__:" + (input != null ? input.trim() : "0"));
+            UIManager.put("OptionPane.background", BG_PANEL);
+            UIManager.put("Panel.background", BG_PANEL);
+
+            int result = JOptionPane.showConfirmDialog(
+                    frame, panel,
+                    "Exploding Kitten pescato!",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            String pos = (result == JOptionPane.OK_OPTION) ? inputField.getText().trim() : "0";
+            inputQueue.offer("__POS__:" + pos);
         });
+
         try {
             String raw = inputQueue.take();
             return Math.max(0, Integer.parseInt(raw.replace("__POS__:", "").trim()));
