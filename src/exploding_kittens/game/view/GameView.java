@@ -82,7 +82,7 @@ public class GameView {
     }
 
     private void buildUI() {
-        frame = new JFrame("Exploding Kittens");
+        frame = new JFrame("Exploding Kittens" );
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(960, 700);
         frame.setMinimumSize(new Dimension(800, 580));

@@ -33,24 +33,20 @@ public class HandManagerAgent extends Agent {
                 String content = msg.getContent();
 
                 if (content.startsWith(Messages.HAND_INIT)) {
-                    // Inizializza la mano con le carte ricevute
                     initHand(content.substring(Messages.HAND_INIT.length()));
 
                 } else if (content.startsWith(Messages.ADD_CARD)) {
-                    // Aggiunge una carta alla mano
                     CardType type = CardType.valueOf(content.substring(Messages.ADD_CARD.length()));
                     hand.addCard(new Card(type, type.name(), ""));
                     System.out.println("Carta aggiunta: " + type);
 
                 } else if (content.startsWith(Messages.REMOVE_CARD)) {
-                    // Rimuove una carta dalla mano
                     CardType type = CardType.valueOf(content.substring(Messages.REMOVE_CARD.length()));
                     Card toRemove = hand.getCardOfType(type);
                     if (toRemove != null) hand.removeCard(toRemove);
                     System.out.println("Carta rimossa: " + type);
 
                 } else if (content.equals(Messages.GET_HAND)) {
-                    // Il PlayerAgent chiede la mano da mostrare all'utente
                     System.out.println("DEBUG HandManager " + getLocalName() +
                             " -> rispondo a: " + playerAgentAID.getLocalName() +
                             " con mano: " + serializeHand());
@@ -60,7 +56,6 @@ public class HandManagerAgent extends Agent {
                     send(reply);
 
                 } else if (content.equals(Messages.HAS_DEFUSE_ASK)) {
-                    // Il KittenDefenseAgent chiede se c'è un Defuse
                     boolean hasDefuse = hand.hasCardOfType(CardType.DEFUSE);
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(msg.getSender());
@@ -68,7 +63,6 @@ public class HandManagerAgent extends Agent {
                     send(reply);
 
                 } else if (content.equals(Messages.USE_DEFUSE)) {
-                    // Il KittenDefenseAgent chiede di consumare il Defuse
                     Card defuse = hand.getCardOfType(CardType.DEFUSE);
                     if (defuse != null) {
                         hand.removeCard(defuse);
@@ -91,6 +85,10 @@ public class HandManagerAgent extends Agent {
                 }
             }
             System.out.println("Mano inizializzata: " + serializeHand());
+            ACLMessage ready = new ACLMessage(ACLMessage.INFORM);
+            ready.addReceiver(playerAgentAID);
+            ready.setContent(Messages.HAND_READY); //per notificare il player che la mano è pronta
+            send(ready);
         }
 
         private String serializeHand() {
