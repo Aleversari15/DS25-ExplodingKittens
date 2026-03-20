@@ -114,14 +114,19 @@ public class KittenDefenseAgent extends Agent {
             );
             ACLMessage msg = myAgent.receive(mt);
 
-            if (msg != null && msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
-                // Inoltra la mossa al PlayerAgent che la manderà al GameMaster
-                ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
-                defuse.addReceiver(playerAgentAID);
-                defuse.setContent(msg.getContent());
-                send(defuse);
+            if (msg != null) {
+                System.out.println("[DEBUG KittenDefense] Ricevuta posizione dal Player: " + msg.getContent());
 
-                myAgent.removeBehaviour(this);
+                if (msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
+                    // Inoltra la mossa al PlayerAgent
+                    ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
+                    defuse.addReceiver(playerAgentAID);
+                    defuse.setContent(msg.getContent());
+                    send(defuse);
+
+                    System.out.println("[DEBUG KittenDefense] Messaggio inoltrato al PlayerAgent. Addio.");
+                    myAgent.removeBehaviour(this);
+                }
             } else {
                 block();
             }

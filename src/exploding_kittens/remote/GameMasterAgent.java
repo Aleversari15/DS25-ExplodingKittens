@@ -210,7 +210,6 @@ public class GameMasterAgent extends Agent {
 
             } else if (content.startsWith(Messages.CAT_CARD_PLAY)) {
                 long catCount = hand.stream().filter(t -> t == CardType.CAT_CARD).count();
-                System.out.println(CAT_LOG + "CAT_CARD_PLAY catCount=" + catCount);
                 if (catCount < 2) {
                     System.out.println(CAT_LOG + "Meno di 2 CAT_CARD -> DISCONFIRM");
                     ACLMessage reply = originalMsg.createReply();
@@ -226,10 +225,8 @@ public class GameMasterAgent extends Agent {
 
         // Cat Card: chiede la mano del target per rubare
         private void prepareCatCard(ACLMessage originalMsg) {
-            System.out.println(CAT_LOG + "prepareCatCard content=" + originalMsg.getContent());
             String[] parts = originalMsg.getContent().split(":");
             if (parts.length < 2) {
-                System.out.println(CAT_LOG + "Target mancante");
                 ACLMessage reply = originalMsg.createReply();
                 reply.setPerformative(ACLMessage.DISCONFIRM);
                 reply.setContent(Messages.MISSING_TARGET);
@@ -342,10 +339,11 @@ public class GameMasterAgent extends Agent {
                 send(reply);
 
                 notifyRefresh(msg.getSender());
-
-                gameState.nextTurn();
-                myAgent.removeBehaviour(this);
-                addBehaviour(new ManageTurnBehaviour());
+                if (drawn.getType() != CardType.EXPLODING_KITTEN) {
+                    gameState.nextTurn();
+                    myAgent.removeBehaviour(this);
+                    addBehaviour(new ManageTurnBehaviour());
+                }
             }
         }
 
@@ -405,13 +403,17 @@ public class GameMasterAgent extends Agent {
         private void handleDefuse(ACLMessage msg) {
             String[] parts = msg.getContent().split(":");
             int position   = Integer.parseInt(parts[1]);
-            position       = Math.min(position, deck.size());
 
+            // Log di verifica
+            System.out.println("!!! GAMEMASTER: Inserisco Exploding Kitten in posizione " + position);
             deck.insertCard(
                     new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
                     position
             );
 
+            // DEBUG: Stampa le prime 3 carte per vedere se il Kitten è lì
+            System.out.println("Prime carte del mazzo dopo Defuse: ");
+            deck.getCards().stream().limit(3).forEach(c -> System.out.println("- " + c.getType()));
             notifyRefresh(msg.getSender());
 
             ACLMessage reply = msg.createReply();

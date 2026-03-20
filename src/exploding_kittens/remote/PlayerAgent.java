@@ -269,16 +269,18 @@ public class PlayerAgent extends Agent {
         }
 
         private void dispatchFromKittenDefenseAgent(String content) {
+            System.out.println("[DEBUG PlayerAgent] Ricevuto comando da KittenDefense: " + content);
             if (content.startsWith(Messages.PLAY)
                     || content.equals(Messages.DRAW)
                     || content.startsWith(Messages.DEFUSE_PLAY)
                     || content.startsWith(Messages.CAT_CARD_PLAY)) {
+                System.out.println("[DEBUG PlayerAgent] Il comando è valido. Provo a inviarlo al GameMaster...");
 
                 ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
                 toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
                 toGM.setContent(content);
                 send(toGM);
-
+                System.out.println("[DEBUG PlayerAgent] Messaggio inviato al GameMaster!");
             } else if (content.equals(Messages.SHOW_DEFUSE_USED)) {
                 view.showDefuseUsed();
 
@@ -286,12 +288,18 @@ public class PlayerAgent extends Agent {
                 view.showYouAreEliminated();
 
             } else if (content.equals(Messages.ASK_DEFUSE_POSITION)) {
+                // Usiamo un Thread per non bloccare l'agente mentre la finestra è aperta
                 new Thread(() -> {
                     int position = view.askDefusePosition(0);
-                    ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
-                    reply.addReceiver(kittenDefenseAID);
-                    reply.setContent(Messages.DEFUSE_PLAY + position);
-                    myAgent.send(reply);
+
+                    System.out.println("[DEBUG LOCAL] Hai scelto la posizione: " + position);
+
+                    ACLMessage defuseMsg = new ACLMessage(ACLMessage.REQUEST);
+                    defuseMsg.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                    defuseMsg.setContent(Messages.DEFUSE_PLAY  + position);
+                    myAgent.send(defuseMsg);
+
+                    System.out.println("[DEBUG LOCAL] Messaggio DEFUSE inviato al GameMaster!");
                 }).start();
 
             } else if (content.equals(Messages.PLAYER_ELIMINATED)) {

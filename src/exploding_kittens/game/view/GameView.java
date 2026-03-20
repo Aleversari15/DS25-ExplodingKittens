@@ -532,12 +532,12 @@ public class GameView {
             );
 
             String pos = (result == JOptionPane.OK_OPTION) ? inputField.getText().trim() : "0";
-            inputQueue.offer("__POS__:" + pos);
+            inputQueue.offer("DEFUSE:" + pos);
         });
 
         try {
             String raw = inputQueue.take();
-            return Math.max(0, Integer.parseInt(raw.replace("__POS__:", "").trim()));
+            return Math.max(0, Integer.parseInt(raw.replace("DEFUSE:", "").trim()));
         } catch (Exception e) {
             return 0;
         }
