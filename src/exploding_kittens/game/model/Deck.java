@@ -20,9 +20,11 @@ public class Deck {
 
         cards.add(card);
     }
+
     public Card removeTopCard() {
         return cards.removeFirst();
     }
+
     public Card getCard(int index) {
 
         return cards.get(index);
@@ -45,5 +47,14 @@ public class Deck {
     public void setCards(List<Card> newCards) {
         cards.clear();
         cards.addAll(newCards);
+    }
+
+    public Card removeCardOfType(CardType type) {
+        for (int i = 0; i < cards.size(); i++) {
+            if (cards.get(i).getType() == type) {
+                return cards.remove(i);
+            }
+        }
+        return null;
     }
 }
