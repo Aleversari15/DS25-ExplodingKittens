@@ -13,6 +13,7 @@ public class ExplodingKitten {
 
     public static void main(String[] args) throws Exception {
 
+
         // Avvia il runtime JADE
         Runtime rt = Runtime.instance();
         Profile profile = new ProfileImpl();
@@ -25,7 +26,7 @@ public class ExplodingKitten {
         AgentController gameMaster = mainContainer.createNewAgent(
                 "GameMaster",
                 "exploding_kittens.remote.GameMasterAgent",
-                 new Object[]{ String.valueOf(2) } //TODO: sostituire con numPlayers dopo averlo letto da input
+                new Object[]{String.valueOf(2)} //TODO: sostituire con numPlayers dopo averlo letto da input
         );
         gameMaster.start();
         System.out.println("GameMasterAgent avviato.");
@@ -39,10 +40,55 @@ public class ExplodingKitten {
             AgentController player = mainContainer.createNewAgent(
                     "Player_" + nicknames[i],
                     "exploding_kittens.remote.PlayerAgent",
-                    new Object[]{ nicknames[i] }
+                    new Object[]{nicknames[i]}
             );
             player.start();
             System.out.println("PlayerAgent avviato: " + nicknames[i]);
         }
+
     }
+        /*public static void main(String[] args) throws Exception {
+        SetupView setup = new SetupView();
+
+        setup.addStartListener(e -> {
+            String adminName = setup.getPlayerName();
+            int numPlayers = setup.getPlayerCount();
+            lobby.close();
+
+            try {
+                startJADE(adminName, numPlayers);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    private static void startJADE(String firstPlayerName, int numPlayers) throws Exception {
+        Runtime rt = Runtime.instance();
+        Profile profile = new ProfileImpl();
+        profile.setParameter(Profile.MAIN_HOST, "localhost");
+        profile.setParameter(Profile.GUI, "true");
+        AgentContainer mainContainer = rt.createMainContainer(profile);
+
+        AgentController gameMaster = mainContainer.createNewAgent(
+                "GameMaster",
+                "exploding_kittens.remote.GameMasterAgent",
+                new Object[]{ String.valueOf(numPlayers) }
+        );
+        gameMaster.start();
+        createPlayer(mainContainer, firstPlayerName);
+
+        System.out.println("Sistema avviato. In attesa di altri " + (numPlayers - 1) + " giocatori...");
+    }
+
+    public static void createPlayer(AgentContainer container, String nickname) throws Exception {
+        AgentController player = container.createNewAgent(
+                "Player_" + nickname,
+                "exploding_kittens.remote.PlayerAgent",
+                new Object[]{ nickname }
+        );
+        player.start();
+    }
+}*/
+
 }
