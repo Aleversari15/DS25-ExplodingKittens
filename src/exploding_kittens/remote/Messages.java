@@ -2,6 +2,7 @@ package exploding_kittens.remote;
 
 public final class Messages {
 
+    //TODO rimettere in ordine la suddivisione in sezioni al termine del progetto
     private Messages() {}
 
     //Registrazione
@@ -32,12 +33,17 @@ public final class Messages {
     public static final String STOLEN            = "STOLEN:";
     public static final String DEFUSED           = "DEFUSED";
     public static final String WINNER            = "WINNER:";
+    public static final String REFRESH_HAND = "REFRESH_HAND";
+    public static final String REQUEST_HAND     = "REQUEST_HAND";
+    public static final String HAND_RESPONSE  = "HAND_RESPONSE:";
 
     //Messaggi tra player e suoi sottoagenti
     public static final String HAND_INIT         = "HAND:";
     public static final String GET_HAND          = "GET_HAND";
     public static final String ADD_CARD          = "ADD_CARD:";
     public static final String REMOVE_CARD       = "REMOVE_CARD:";
+    public static final String HAND_READY = "HAND_READY";
+
 
     // Messaggi  da KittenDefenseAgent a PlayerAgent per la UI
     public static final String SHOW_DEFUSE_USED      = "SHOW_DEFUSE_USED";
@@ -54,4 +60,7 @@ public final class Messages {
     public static final String HAS_DEFUSE_YES    = "HAS_DEFUSE:YES";
     public static final String HAS_DEFUSE_NO     = "HAS_DEFUSE:NO";
     public static final String USE_DEFUSE        = "USE_DEFUSE";
+
+    public static final String YOU_STOLE        = "YOU_STOLE:";
+    public static final String STOLEN_FROM_YOU  = "STOLEN_FROM_YOU:";
 }
