@@ -388,9 +388,11 @@ public class GameMasterAgent extends Agent {
         }
 
         private void handleSeeTheFuture(ACLMessage msg) {
-            List<Card> top3 = deck.peekTop(3);
+            int count = Math.min(3, deck.size()); //Gestione caso in cui nel mazzo siano rimaste meno di 3 carte
+            List<Card> cardsToShow = deck.peekTop(count);
+
             StringBuilder sb = new StringBuilder(Messages.SEE_THE_FUTURE);
-            for (Card c : top3) sb.append(c.getType().name()).append(",");
+            for (Card c : cardsToShow) sb.append(c.getType().name()).append(",");
 
             notifyRefresh(msg.getSender());
 
