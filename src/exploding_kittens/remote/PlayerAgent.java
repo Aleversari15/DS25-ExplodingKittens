@@ -307,6 +307,11 @@ public class PlayerAgent extends Agent {
                 toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
                 toGM.setContent(Messages.PLAYER_ELIMINATED);
                 send(toGM);
+
+            } else if (content.equals(Messages.REFRESH_HAND_AFTER_DEFUSE)) {
+                queryingForMaster = false;
+                waitingForInput = false;
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             }
         }
     }

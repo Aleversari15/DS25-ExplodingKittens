@@ -93,6 +93,12 @@ public class KittenDefenseAgent extends Agent {
             useDefuse.setContent(Messages.USE_DEFUSE);
             send(useDefuse);
 
+            //Refresh delle carte in mano al player
+            ACLMessage refresh = new ACLMessage(ACLMessage.INFORM);
+            refresh.addReceiver(playerAgentAID);
+            refresh.setContent(Messages.REFRESH_HAND_AFTER_DEFUSE);
+            send(refresh);
+
             // Chiede al PlayerAgent di raccogliere la posizione dall'utente
             ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
             ask.addReceiver(playerAgentAID);

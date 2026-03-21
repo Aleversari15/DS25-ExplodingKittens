@@ -43,6 +43,7 @@ public final class Messages {
     public static final String ADD_CARD          = "ADD_CARD:";
     public static final String REMOVE_CARD       = "REMOVE_CARD:";
     public static final String HAND_READY = "HAND_READY";
+    public static final String REFRESH_HAND_AFTER_DEFUSE = "REFRESH_HAND_AFTER_DEFUSE";
 
 
     // Messaggi  da KittenDefenseAgent a PlayerAgent per la UI

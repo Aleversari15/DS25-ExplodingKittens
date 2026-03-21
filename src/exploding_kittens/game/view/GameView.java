@@ -14,9 +14,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import javax.imageio.ImageIO;
 
 /**
- * GUI Swing per Exploding Kittens.
+ * GUI Swing per singolo giocatore.
  * Le carte mostrano le immagini caricate da resources/.
- * Thread-safe tramite BlockingQueue per l'input utente.
+ * Mostra che carte che il giocatore ha in mano e in formato testuale mostra tutte le azioni e i cambi di turno della partita.
  */
 public class GameView {
 
