@@ -76,6 +76,7 @@ public class GameMasterAgent extends Agent {
             }
 
             System.out.println("Partita avviata!");
+            broadcastPlayersList();
             addBehaviour(new ManageTurnBehaviour());
         }
     }
@@ -406,13 +407,6 @@ public class GameMasterAgent extends Agent {
             String[] parts = msg.getContent().split(":");
             int position   = Integer.parseInt(parts[1]);
 
-            // Log di verifica
-            System.out.println("!!! GAMEMASTER: Inserisco Exploding Kitten in posizione " + position);
-            deck.insertCard(
-                    new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
-                    position
-            );
-
             // DEBUG: Stampa le prime 3 carte per vedere se il Kitten è lì
             System.out.println("Prime carte del mazzo dopo Defuse: ");
             deck.getCards().stream().limit(3).forEach(c -> System.out.println("- " + c.getType()));
@@ -484,6 +478,15 @@ public class GameMasterAgent extends Agent {
                 .filter(p -> p.getAgentName().equals(agentName))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private void broadcastPlayersList() {
+        StringBuilder sb = new StringBuilder("PLAYERS_LIST:");
+        for (int i = 0; i < gameState.getActivePlayers().size(); i++) {
+            sb.append(gameState.getActivePlayers().get(i).getNickname());
+            if (i < gameState.getActivePlayers().size() - 1) sb.append(",");
+        }
+        broadcastToAll(sb.toString());
     }
 }
 

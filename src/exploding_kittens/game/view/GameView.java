@@ -47,6 +47,9 @@ public class GameView {
     private JLabel    turnLabel;
     private JLabel    nicknameLabel;
     private JPanel    actionPanel;
+    private JPanel    playersPanel;
+    private DefaultListModel<String> playersListModel;
+    private JList<String> playersList;
 
     private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
 
@@ -82,19 +85,55 @@ public class GameView {
     }
 
     private void buildUI() {
-        frame = new JFrame("Exploding Kittens" );
+        frame = new JFrame("Exploding Kittens");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(960, 700);
         frame.setMinimumSize(new Dimension(800, 580));
         frame.getContentPane().setBackground(BG_DARK);
         frame.setLayout(new BorderLayout(0, 0));
 
-        frame.add(buildHeader(),      BorderLayout.NORTH);
-        frame.add(buildLogPanel(),    BorderLayout.CENTER);
+        JPanel mainContainer = new JPanel(new BorderLayout(10, 0));
+        mainContainer.setBackground(BG_DARK);
+
+        mainContainer.add(buildPlayersSidebar(), BorderLayout.WEST);
+        mainContainer.add(buildLogPanel(), BorderLayout.CENTER);
+
+        frame.add(buildHeader(), BorderLayout.NORTH);
+        frame.add(mainContainer, BorderLayout.CENTER);
         frame.add(buildBottomPanel(), BorderLayout.SOUTH);
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+    private JPanel buildPlayersSidebar() {
+        JPanel sidebar = new JPanel(new BorderLayout(0, 10));
+        sidebar.setBackground(BG_DARK);
+        sidebar.setPreferredSize(new Dimension(180, 0));
+        sidebar.setBorder(new EmptyBorder(12, 16, 0, 0));
+
+        JLabel sideTitle = new JLabel("GIOCATORI IN VITA");
+        sideTitle.setFont(new Font("Georgia", Font.BOLD, 11));
+        sideTitle.setForeground(TEXT_MUTED);
+
+        playersListModel = new DefaultListModel<>();
+        playersList = new JList<>(playersListModel);
+        playersList.setBackground(BG_PANEL);
+        playersList.setForeground(TEXT_PRIMARY);
+        playersList.setFont(FONT_LABEL);
+        playersList.setFixedCellHeight(30);
+        playersList.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+        playersList.setSelectionModel(new DefaultListSelectionModel() {
+            @Override public void setSelectionInterval(int index0, int index1) { super.setSelectionInterval(-1, -1); }
+        });
+
+        JScrollPane scroll = new JScrollPane(playersList);
+        scroll.setBorder(new LineBorder(BORDER_COLOR, 1));
+
+        sidebar.add(sideTitle, BorderLayout.NORTH);
+        sidebar.add(scroll, BorderLayout.CENTER);
+
+        return sidebar;
     }
 
     private JPanel buildHeader() {
@@ -291,7 +330,16 @@ public class GameView {
         return card;
     }
 
-
+    public void updatePlayersList(List<String> playerNames) {
+        SwingUtilities.invokeLater(() -> {
+            if (playersListModel != null) {
+                playersListModel.clear();
+                for (String name : playerNames) {
+                    playersListModel.addElement(" • " + name);
+                }
+            }
+        });
+    }
 
     public void showWelcome(String nickname) {
         SwingUtilities.invokeLater(() -> {

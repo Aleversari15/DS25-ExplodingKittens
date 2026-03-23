@@ -33,9 +33,10 @@ public final class Messages {
     public static final String STOLEN            = "STOLEN:";
     public static final String DEFUSED           = "DEFUSED";
     public static final String WINNER            = "WINNER:";
-    public static final String REFRESH_HAND = "REFRESH_HAND";
+    public static final String GAME_OVER         = "GAME_OVER:";
+    public static final String REFRESH_HAND      = "REFRESH_HAND";
     public static final String REQUEST_HAND     = "REQUEST_HAND";
-    public static final String HAND_RESPONSE  = "HAND_RESPONSE:";
+    public static final String HAND_RESPONSE       = "HAND_RESPONSE:";
 
     //Messaggi tra player e suoi sottoagenti
     public static final String HAND_INIT         = "HAND:";
@@ -64,4 +65,6 @@ public final class Messages {
 
     public static final String YOU_STOLE        = "YOU_STOLE:";
     public static final String STOLEN_FROM_YOU  = "STOLEN_FROM_YOU:";
+
+
 }

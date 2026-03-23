@@ -129,6 +129,7 @@ public class PlayerAgent extends Agent {
                     response.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
                     response.setContent(Messages.HAND_RESPONSE + serialized);
                     send(response);
+                    view.updatePlayersList(List.of(Messages.YOUR_TURN));
 
                 } else {
                     String hand = content.substring(Messages.HAND_INIT.length());
@@ -159,7 +160,7 @@ public class PlayerAgent extends Agent {
                     yourTurnPending = true; // aspetta che HandManager sia pronto
                 }
 
-            } else if (content.startsWith(Messages.TURN_OF)) {
+            }  else if (content.startsWith(Messages.TURN_OF)) {
                 view.showOtherPlayerTurn(content.substring(Messages.TURN_OF.length()));
 
             } else if (content.equals(Messages.DREW_KITTEN)) {
@@ -225,8 +226,14 @@ public class PlayerAgent extends Agent {
             } else if (content.startsWith(Messages.WINNER)) {
                 view.showGameOver(content.substring(Messages.WINNER.length()));
 
-            } else {
-                // Messaggi broadcast generici (es. eliminazioni, notifiche)
+            }else if (content.startsWith("PLAYERS_LIST:")) {
+                String[] names = content.substring("PLAYERS_LIST:".length()).split(",");
+                List<String> allPlayers = Arrays.stream(names)
+                        .filter(n -> !n.isBlank())
+                        .toList();
+                view.updatePlayersList(allPlayers);
+            }
+            else {
                 view.showError(content);
             }
         }
@@ -244,6 +251,7 @@ public class PlayerAgent extends Agent {
             }
 
             if (content.startsWith(Messages.HAND_INIT)) {
+                List<String> initialPlayers = new ArrayList<>();
                 if (queryingForMaster) {
                     queryingForMaster = false;
                     String serialized = content.substring(Messages.HAND_INIT.length());
