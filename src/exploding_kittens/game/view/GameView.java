@@ -223,25 +223,8 @@ public class GameView {
         actionPanel.setBackground(BG_DARK);
 
         JButton drawBtn    = buildButton("PESCA",          ACCENT_GREEN);
-        JButton skipBtn    = buildButton("SKIP",            ACCENT_BLUE);
-        JButton attackBtn  = buildButton("ATTACK",          ACCENT_RED);
-        JButton shuffleBtn = buildButton("SHUFFLE",         ACCENT_ORANGE);
-        JButton futureBtn  = buildButton("SEE THE FUTURE",  ACCENT_PURPLE);
-        JButton catBtn     = buildButton("CAT CARD",        ACCENT_ORANGE);
-
         drawBtn.addActionListener(e    -> inputQueue.offer("DRAW"));
-        skipBtn.addActionListener(e    -> inputQueue.offer("PLAY:SKIP"));
-        attackBtn.addActionListener(e  -> inputQueue.offer("PLAY:ATTACK"));
-        shuffleBtn.addActionListener(e -> inputQueue.offer("PLAY:SHUFFLE"));
-        futureBtn.addActionListener(e  -> inputQueue.offer("PLAY:SEE_THE_FUTURE"));
-        catBtn.addActionListener(e     -> askCatCardTarget());
-
         actionPanel.add(drawBtn);
-        actionPanel.add(skipBtn);
-        actionPanel.add(attackBtn);
-        actionPanel.add(shuffleBtn);
-        actionPanel.add(futureBtn);
-        actionPanel.add(catBtn);
 
         setActionsEnabled(false);
 
@@ -284,7 +267,6 @@ public class GameView {
         Color accent = cardAccent(cardType);
         Image img    = cardImages.get(cardType.trim());
 
-        // Scala l'immagine
         final Image scaledImg = (img != null)
                 ? img.getScaledInstance(100, 120, Image.SCALE_SMOOTH)
                 : null;
@@ -294,40 +276,59 @@ public class GameView {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Effetto hover: se il mouse è sopra, schiarisci leggermente il fondo
                 g2.setColor(BG_CARD);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
+
                 g2.setColor(accent);
-                g2.setStroke(new BasicStroke(1.5f));
+                g2.setStroke(new BasicStroke(2.0f));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 12, 12));
                 g2.dispose();
             }
         };
+
         card.setOpaque(false);
         card.setPreferredSize(new Dimension(110, 170));
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // --- LOGICA DI CLICK ---
+        card.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                // Permetti il click solo se è il turno del giocatore (bottoni abilitati)
+                if (actionPanel.getComponent(0).isEnabled()) {
+                    handleCardClick(cardType);
+                }
+            }
+        });
 
         if (scaledImg != null) {
             JLabel imgLabel = new JLabel(new ImageIcon(scaledImg));
             imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
             card.add(imgLabel, BorderLayout.CENTER);
-        } else {
-            //Testo mostrato se ci sono problemi con l'immagine
-            JLabel fallback = new JLabel(cardName(cardType), SwingConstants.CENTER);
-            fallback.setFont(new Font("Georgia", Font.BOLD, 9));
-            fallback.setForeground(accent);
-            card.add(fallback, BorderLayout.CENTER);
         }
 
-        // Nome carta in basso
-        JLabel nameLabel = new JLabel(
-                "<html><center>" + cardName(cardType) + "</center></html>",
-                SwingConstants.CENTER
-        );
+        JLabel nameLabel = new JLabel("<html><center>" + cardName(cardType) + "</center></html>", SwingConstants.CENTER);
         nameLabel.setFont(FONT_CARD_SM);
         nameLabel.setForeground(accent);
         card.add(nameLabel, BorderLayout.SOUTH);
 
         return card;
+    }
+
+    private void handleCardClick(String cardType) {
+        String type = cardType.trim();
+        switch (type) {
+            case "SKIP"           -> inputQueue.offer("PLAY:SKIP");
+            case "ATTACK"         -> inputQueue.offer("PLAY:ATTACK");
+            case "SHUFFLE"        -> inputQueue.offer("PLAY:SHUFFLE");
+            case "SEE_THE_FUTURE" -> inputQueue.offer("PLAY:SEE_THE_FUTURE");
+            case "CAT_CARD"       -> askCatCardTarget();
+            case "DEFUSE"         -> appendLog("[Info] Il Defuse si attiva automaticamente se peschi un Kitten!");
+            default -> appendLog("[Info] Questa carta non può essere giocata direttamente.");
+        }
     }
 
     public void updatePlayersList(List<String> playerNames) {
