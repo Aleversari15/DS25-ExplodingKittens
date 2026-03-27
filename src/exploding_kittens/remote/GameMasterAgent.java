@@ -5,6 +5,9 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import java.util.*;
@@ -19,6 +22,23 @@ public class GameMasterAgent extends Agent {
     private static final String CAT_LOG = "[GameMaster - CAT_CARD] ";
     @Override
     protected void setup() {
+        //Registrazione al DF per versione distribuita
+        try {
+            DFAgentDescription dfd = new DFAgentDescription();
+            dfd.setName(getAID());
+
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("game-master");
+            sd.setName("exploding-kittens");
+
+            dfd.addServices(sd);
+            DFService.register(this, dfd);
+
+            System.out.println("GameMaster registrato nel DF");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         Object[] args = getArguments();
         expectedPlayers = (args != null) ? Integer.parseInt(args[0].toString()) : 2;
         gameState = new GameState();

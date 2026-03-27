@@ -5,6 +5,9 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.wrapper.AgentContainer;
@@ -18,6 +21,7 @@ public class PlayerAgent extends Agent {
 
     private AID handManagerAID;
     private AID kittenDefenseAID;
+    private AID gameMasterAID;
     private String nickname;
     private GameView view;
 
@@ -33,6 +37,24 @@ public class PlayerAgent extends Agent {
         addBehaviour(new RegisterToGameMasterBehaviour());
     }
 
+    private AID findGameMaster() {
+        try {
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("game-master");
+            template.addServices(sd);
+
+            DFAgentDescription[] result = DFService.search(this, template);
+
+            if (result.length > 0) {
+                return result[0].getName();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     private void startSubAgents() {
         AgentContainer container = getContainerController();
@@ -65,10 +87,19 @@ public class PlayerAgent extends Agent {
     private class RegisterToGameMasterBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
+            while (gameMasterAID == null) {
+                gameMasterAID = findGameMaster();
+                if (gameMasterAID == null) {
+                    System.out.println("GameMaster non trovato, ritento...");
+                    try { Thread.sleep(1000); } catch (Exception e) {}
+                }
+            }
+
             ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-            msg.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+            msg.addReceiver(gameMasterAID);
             msg.setContent(Messages.JOIN);
             send(msg);
+
             addBehaviour(new WaitForConfirmBehaviour());
         }
     }
@@ -126,7 +157,7 @@ public class PlayerAgent extends Agent {
                     queryingForMaster = false;
                     String serialized = content.substring(Messages.HAND_INIT.length());
                     ACLMessage response = new ACLMessage(ACLMessage.INFORM);
-                    response.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                    response.addReceiver(gameMasterAID);
                     response.setContent(Messages.HAND_RESPONSE + serialized);
                     send(response);
                     view.updatePlayersList(List.of(Messages.YOUR_TURN));
@@ -139,7 +170,7 @@ public class PlayerAgent extends Agent {
                     new Thread(() -> {
                         String input = view.askAction();
                         ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                        toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                        toGM.addReceiver(gameMasterAID);
                         toGM.setContent(input);
                         myAgent.send(toGM);
                         waitingForInput = false;
@@ -256,7 +287,7 @@ public class PlayerAgent extends Agent {
                     queryingForMaster = false;
                     String serialized = content.substring(Messages.HAND_INIT.length());
                     ACLMessage response = new ACLMessage(ACLMessage.INFORM);
-                    response.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                    response.addReceiver(gameMasterAID);
                     response.setContent(Messages.HAND_RESPONSE + serialized);
                     send(response);
                 } else {
@@ -267,7 +298,7 @@ public class PlayerAgent extends Agent {
                     new Thread(() -> {
                         String input = view.askAction();
                         ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                        toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                        toGM.addReceiver(gameMasterAID);
                         toGM.setContent(input);
                         myAgent.send(toGM);
                         waitingForInput = false;
@@ -285,7 +316,7 @@ public class PlayerAgent extends Agent {
                 System.out.println("[DEBUG PlayerAgent] Il comando è valido. Provo a inviarlo al GameMaster...");
 
                 ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                toGM.addReceiver(gameMasterAID);
                 toGM.setContent(content);
                 send(toGM);
                 System.out.println("[DEBUG PlayerAgent] Messaggio inviato al GameMaster!");
@@ -303,7 +334,7 @@ public class PlayerAgent extends Agent {
                     System.out.println("[DEBUG LOCAL] Hai scelto la posizione: " + position);
 
                     ACLMessage defuseMsg = new ACLMessage(ACLMessage.REQUEST);
-                    defuseMsg.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                    defuseMsg.addReceiver(gameMasterAID);
                     defuseMsg.setContent(Messages.DEFUSE_PLAY  + position);
                     myAgent.send(defuseMsg);
 
@@ -312,7 +343,7 @@ public class PlayerAgent extends Agent {
 
             } else if (content.equals(Messages.PLAYER_ELIMINATED)) {
                 ACLMessage toGM = new ACLMessage(ACLMessage.INFORM);
-                toGM.addReceiver(new AID("GameMaster", AID.ISLOCALNAME));
+                toGM.addReceiver(gameMasterAID);
                 toGM.setContent(Messages.PLAYER_ELIMINATED);
                 send(toGM);
 

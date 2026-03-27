@@ -7,16 +7,15 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import java.util.Scanner;
 /**
- * Entry point del gioco.
+ * Entry point del gioco (utile per test locali)
  */
 public class ExplodingKitten {
 
     public static void main(String[] args) throws Exception {
 
-
-        // Avvia il runtime JADE
         Runtime rt = Runtime.instance();
         Profile profile = new ProfileImpl();
+
         profile.setParameter(Profile.MAIN_HOST, "localhost");
         profile.setParameter(Profile.GUI, "true");
 
