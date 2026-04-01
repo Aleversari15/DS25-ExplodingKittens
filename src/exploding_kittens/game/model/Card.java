@@ -11,6 +11,12 @@ public class Card {
         this.description = description;
     }
 
+    public Card(CardType type) {
+        this.type = type;
+        this.name = type.name(); // Usa il nome dell'enum come nome carta
+        this.description = "Carta di tipo " + type.name(); // Descrizione generica
+    }
+
     public CardType getType() {
         return type;
     }

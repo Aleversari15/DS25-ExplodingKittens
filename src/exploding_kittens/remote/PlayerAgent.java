@@ -29,6 +29,15 @@ public class PlayerAgent extends Agent {
     protected void setup() {
         Object[] args = getArguments();
         nickname = (args != null) ? args[0].toString() : getLocalName();
+        try {
+            DFAgentDescription dfd = new DFAgentDescription();
+            dfd.setName(getAID());
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("player"); // Il Backup cercherà questo tipo
+            sd.setName(nickname);
+            dfd.addServices(sd);
+            DFService.register(this, dfd);
+        } catch (Exception e) { e.printStackTrace(); }
         view = new GameView();
         view.showWelcome(nickname);
         view.showWaitingForPlayers();
@@ -114,6 +123,23 @@ public class PlayerAgent extends Agent {
                 System.out.println(nickname + " registrato alla partita!");
                 myAgent.removeBehaviour(this);
                 addBehaviour(new ListenFromGameMasterBehaviour());
+                addBehaviour(new BackupListenerBehaviour());
+            } else {
+                block();
+            }
+        }
+    }
+
+    /*Gestione caso in cui MasterAgent primario fallisce*/
+    private class BackupListenerBehaviour extends CyclicBehaviour {
+        @Override
+        public void action() {
+            MessageTemplate mt = MessageTemplate.MatchContent(Messages.NEW_MASTER);
+            ACLMessage msg = myAgent.receive(mt);
+
+            if (msg != null) {
+                gameMasterAID = msg.getSender();
+                System.out.println("Switch effettuato: nuovo Master è " + gameMasterAID.getLocalName());
             } else {
                 block();
             }
@@ -150,7 +176,6 @@ public class PlayerAgent extends Agent {
         }
 
         private void dispatchFromGameMaster(String content) {
-
             if (content.startsWith(Messages.HAND_INIT)) {
                 sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
                 if (queryingForMaster) {
@@ -160,7 +185,7 @@ public class PlayerAgent extends Agent {
                     response.addReceiver(gameMasterAID);
                     response.setContent(Messages.HAND_RESPONSE + serialized);
                     send(response);
-                    view.updatePlayersList(List.of(Messages.YOUR_TURN));
+                    //view.updatePlayersList(List.of(Messages.YOUR_TURN));
 
                 } else {
                     String hand = content.substring(Messages.HAND_INIT.length());
@@ -282,7 +307,6 @@ public class PlayerAgent extends Agent {
             }
 
             if (content.startsWith(Messages.HAND_INIT)) {
-                List<String> initialPlayers = new ArrayList<>();
                 if (queryingForMaster) {
                     queryingForMaster = false;
                     String serialized = content.substring(Messages.HAND_INIT.length());

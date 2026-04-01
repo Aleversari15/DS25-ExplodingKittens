@@ -67,4 +67,8 @@ public final class Messages {
     public static final String STOLEN_FROM_YOU  = "STOLEN_FROM_YOU:";
 
 
+    //Gestione backup server
+    public static final String HEARTBEAT = "HEARTBEAT:";
+    public static final String NEW_MASTER = "NEW_MASTER"; //broadcast per far aggiornamenti AID del master ai client
+    public static final String BACKUP_REGISTER = "BACKUP_REGISTER";
 }

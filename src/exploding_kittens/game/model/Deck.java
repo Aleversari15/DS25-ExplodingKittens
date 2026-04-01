@@ -22,7 +22,14 @@ public class Deck {
         cards.add(card);
     }
 
+    public boolean isEmpty() {
+        return cards.isEmpty();
+    }
+
     public Card removeTopCard() {
+        if (cards.isEmpty()) {
+            return null;
+        }
         return cards.removeFirst();
     }
 
@@ -35,9 +42,9 @@ public class Deck {
         cards.add(position, card);
     }
     public List<Card> peekTop(int n) {
-
         return new ArrayList<>(cards.subList(0, n));
     }
+
     public int size() {
 
         return cards.size();
