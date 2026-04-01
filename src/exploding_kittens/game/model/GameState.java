@@ -22,6 +22,10 @@ public class GameState {
         activePlayers.remove(player);
     }
 
+    public int getCurrentPlayerIndex() {
+        return currentPlayerIndex;
+    }
+
     public Player getCurrentPlayer() {
         return activePlayers.get(currentPlayerIndex);
     }
@@ -54,4 +58,14 @@ public class GameState {
         return isGameOver() ? activePlayers.getFirst() : null;
     }
 
+    public void setCurrentPlayerIndex(int index) {
+        if (!activePlayers.isEmpty()) {
+            this.currentPlayerIndex = index % activePlayers.size();
+        }
+    }
+
+    public void setActivePlayers(List<Player> players) {
+        this.activePlayers.clear();
+        this.activePlayers.addAll(players);
+    }
 }

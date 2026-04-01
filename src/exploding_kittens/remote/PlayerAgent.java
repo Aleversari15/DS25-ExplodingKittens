@@ -37,6 +37,15 @@ public class PlayerAgent extends Agent {
             requestedPlayers = 2; // Default
         }
 
+        try {
+            DFAgentDescription dfd = new DFAgentDescription();
+            dfd.setName(getAID());
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("player"); // Il Backup cercherà questo tipo
+            sd.setName(nickname);
+            dfd.addServices(sd);
+            DFService.register(this, dfd);
+        } catch (Exception e) { e.printStackTrace(); }
         view = new GameView();
         view.showWelcome(nickname);
         view.showWaitingForPlayers();
@@ -126,6 +135,7 @@ public class PlayerAgent extends Agent {
                     System.out.println(nickname + " registrato alla partita!");
                     myAgent.removeBehaviour(this);
                     addBehaviour(new ListenFromGameMasterBehaviour());
+                    addBehaviour(new BackupListenerBehaviour());
                 } else if (msg.getPerformative() == ACLMessage.REFUSE) {
                     // Gestione lobby piena
                     view.showError("Impossibile entrare: la lobby è piena o la partita è già iniziata.");
@@ -133,6 +143,24 @@ public class PlayerAgent extends Agent {
                     // Opzionale: chiudere l'agente o tornare al setup
                     // myAgent.doDelete();
                 }
+            } else {
+                block();
+            }
+        }
+    }
+
+    /*Gestione caso in cui MasterAgent primario fallisce*/
+    private class BackupListenerBehaviour extends CyclicBehaviour {
+        @Override
+        public void action() {
+            MessageTemplate mt = MessageTemplate.MatchContent(Messages.NEW_MASTER);
+            ACLMessage msg = myAgent.receive(mt);
+
+            if (msg != null) {
+                gameMasterAID = msg.getSender();
+                System.out.println("Switch effettuato: nuovo Master è " + gameMasterAID.getLocalName());
+                view.showError("Il Master primario è caduto. Backup attivato!"); //DEBUG
+                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             } else {
                 block();
             }
@@ -155,13 +183,18 @@ public class PlayerAgent extends Agent {
             if (msg != null) {
                 String content     = msg.getContent();
                 String senderLocal = msg.getSender().getLocalName();
+                AID sender = msg.getSender();
 
-                if (senderLocal.startsWith("GameMaster")) {
+                if (sender.equals(gameMasterAID)) {
                     dispatchFromGameMaster(content);
-                } else if (msg.getSender().getLocalName().equals(handManagerAID.getLocalName())) {
+                } else if (sender.getLocalName().equals(handManagerAID.getLocalName())) {
                     dispatchFromHandManagerAgent(content);
-                } else {
+                } else if (sender.getLocalName().equals(kittenDefenseAID.getLocalName())) {
                     dispatchFromKittenDefenseAgent(content);
+                } else {
+                    // Se arriva un messaggio da uno sconosciuto (es. il Backup prima che lo conoscessimo)
+                    // Possiamo gestirlo o loggarlo per debug
+                    System.out.println("Messaggio ricevuto da mittente non riconosciuto: " + sender.getLocalName());
                 }
             } else {
                 block();
@@ -179,7 +212,7 @@ public class PlayerAgent extends Agent {
                     response.addReceiver(gameMasterAID);
                     response.setContent(Messages.HAND_RESPONSE + serialized);
                     send(response);
-                    view.updatePlayersList(List.of(Messages.YOUR_TURN));
+                    //view.updatePlayersList(List.of(Messages.YOUR_TURN));
 
                 } else {
                     String hand = content.substring(Messages.HAND_INIT.length());
@@ -301,7 +334,6 @@ public class PlayerAgent extends Agent {
             }
 
             if (content.startsWith(Messages.HAND_INIT)) {
-                List<String> initialPlayers = new ArrayList<>();
                 if (queryingForMaster) {
                     queryingForMaster = false;
                     String serialized = content.substring(Messages.HAND_INIT.length());

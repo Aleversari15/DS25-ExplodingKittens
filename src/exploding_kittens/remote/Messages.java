@@ -9,6 +9,7 @@ public final class Messages {
     public static final String JOIN              = "JOIN";
     public static final String JOINED            = "JOINED";
 
+
     //Gestione turno
     public static final String YOUR_TURN         = "YOUR_TURN";
     public static final String TURN_OF           = "TURN:";
@@ -30,10 +31,8 @@ public final class Messages {
     public static final String ATTACK_OK         = "ATTACK_OK";
     public static final String SHUFFLE_OK        = "SHUFFLE_OK";
     public static final String SEE_THE_FUTURE    = "SEE_THE_FUTURE:";
-    public static final String STOLEN            = "STOLEN:";
     public static final String DEFUSED           = "DEFUSED";
     public static final String WINNER            = "WINNER:";
-    public static final String GAME_OVER         = "GAME_OVER:";
     public static final String REFRESH_HAND      = "REFRESH_HAND";
     public static final String REQUEST_HAND     = "REQUEST_HAND";
     public static final String HAND_RESPONSE       = "HAND_RESPONSE:";
@@ -67,4 +66,8 @@ public final class Messages {
     public static final String STOLEN_FROM_YOU  = "STOLEN_FROM_YOU:";
 
 
+    //Gestione backup server
+    public static final String HEARTBEAT = "HEARTBEAT:";
+    public static final String NEW_MASTER = "NEW_MASTER"; //broadcast per far aggiornamenti AID del master ai client
+    public static final String BACKUP_REGISTER = "BACKUP_REGISTER";
 }

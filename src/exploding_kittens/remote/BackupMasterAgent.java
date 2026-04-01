@@ -11,136 +11,170 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class GameMasterAgent extends Agent {
-
+public class BackupMasterAgent extends Agent {
     private GameState gameState;
-    private Deck deck;
-    private int expectedPlayers = -1; //significa che non è ancora stato impostato
-    private AID backupMasterAID;
+    private long lastHeartbeatTime;
+    private static final long TIMEOUT = 10000;
     private static final String CAT_LOG = "[GameMaster - CAT_CARD] ";
+    private Deck deck;
 
     @Override
     protected void setup() {
+        registerInDF();
+
+        addBehaviour(new CyclicBehaviour() {
+            @Override
+            public void action() {
+
+                ACLMessage msg = myAgent.receive();
+                if (msg != null) {
+                    String content = msg.getContent();
+                    if(content != null && content.startsWith(Messages.HEARTBEAT)) {
+                        System.out.println("DEBUG: Heartbeat ricevutoooo!");
+                        lastHeartbeatTime = System.currentTimeMillis();
+                        String stateData = msg.getContent().substring(Messages.HEARTBEAT.length() +1); //in pratica gli facciamo prendere tutta la stringa dopo i :
+                        reconstructState(stateData);
+                    }
+
+                } else {
+                    block();
+                }
+            }
+        });
+
+        addBehaviour(new TickerBehaviour(this, 2000) {
+            @Override
+            protected void onTick() {
+                if (lastHeartbeatTime > 0 && (System.currentTimeMillis() - lastHeartbeatTime > TIMEOUT)) {
+                    promoteToMaster();
+                    stop(); // Ferma questo ticker
+                }
+            }
+        });
+    }
+
+    private void reconstructState(String data) {
+        try {
+            System.out.println("DEBUG DATA RICEVUTI: " + data);
+            String[] parts = data.split(":", 4); // Usiamo -1 per non ignorare campi vuoti
+            if (parts.length < 4){
+                System.err.println("Dati insufficienti! Parti trovate: " + parts.length);
+                return;
+            }
+
+            if (this.gameState == null) this.gameState = new GameState();
+            if (this.deck == null) this.deck = new Deck();
+
+            // 1. Ripristino Turni e Indice
+            int currentIndex = Integer.parseInt(parts[0]);
+            int turnsToPlay = Integer.parseInt(parts[1]);
+            gameState.setCurrentPlayerIndex(currentIndex);
+            gameState.setTurnsToPlay(turnsToPlay);
+
+            // 2. Ripristino Mazzo
+            List<Card> restoredCards = new ArrayList<>();
+            if (!parts[2].isEmpty()) {
+                for (String cardName : parts[2].split(",")) {
+                    restoredCards.add(new Card(CardType.valueOf(cardName)));
+                }
+            }
+            deck.setCards(restoredCards);
+
+            // 3. Ripristino Giocatori
+            List<Player> restoredPlayers = new ArrayList<>();
+            if (!parts[3].isEmpty()) {
+                for (String pData : parts[3].split("\\|")) {
+                    String[] pParts = pData.split(",");
+                    String agentAID = pParts[0];
+                    String nickname = pParts[1];
+
+                    if(nickname.startsWith("Player_")){
+                        nickname = nickname.replaceFirst("Player_", "");
+                    }
+                    restoredPlayers.add(new Player(agentAID, nickname));
+                }
+            }
+            gameState.setActivePlayers(restoredPlayers);
+            System.out.println("DEBUG: Stato ricostruito. Giocatori: " + restoredPlayers.size());
+
+        } catch (Exception e) {
+            System.err.println("Errore durante la ricostruzione dello stato: " + e.getMessage());
+        }
+    }
+
+    private void registerInDF() {
         try {
             DFAgentDescription dfd = new DFAgentDescription();
             dfd.setName(getAID());
-
             ServiceDescription sd = new ServiceDescription();
-            sd.setType("game-master");
-            sd.setName("exploding-kittens");
-
+            sd.setType("backup-master");
+            sd.setName("exploding-kittens-backup");
             dfd.addServices(sd);
             DFService.register(this, dfd);
-
-            System.out.println("GameMaster registrato nel DF");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        Object[] args = getArguments();
-        if(args !=null && args.length>0) {
-            expectedPlayers =  Integer.parseInt(args[0].toString());
-        }
-        gameState = new GameState();
-        deck      = new Deck();
-
-        System.out.println("GameMaster avviato, aspetto " + expectedPlayers + " giocatori...");
-        addBehaviour(new WaitForPlayersBehaviour());
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
+    private void promoteToMaster() {
+        System.out.println("!!! GameMaster primario caduto. Mi promuovo a Master !!!");
 
-    private class WaitForPlayersBehaviour extends CyclicBehaviour {
-        @Override
-        public void action() {
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
-            ACLMessage msg = myAgent.receive(mt);
+        // Cambia registrazione nel DF da backup-master a game-master
+        updateDFtoPrimary();
 
-            if (msg != null) {
-                String content = msg.getContent();
+        // Notifica i Player
+        broadcastNewMaster();
 
-                // Controlliamo se il messaggio inizia con la costante JOIN
-                if (content != null && content.startsWith(Messages.JOIN)) {
 
-                    // Se expectedPlayers è -1, questo è il PRIMO giocatore!
-                    if (expectedPlayers == -1) {
-                        try {
-                            // Estrapoliamo il numero di giocatori (es. da "JOIN:4")
-                            String[] parts = content.split(":");
-                            if (parts.length > 1) {
-                                expectedPlayers = Integer.parseInt(parts[1]);
-                            } else {
-                                expectedPlayers = 2; // Valore di fallback se il parsing fallisce
-                            }
-                            System.out.println("Lobby creata! Il primo giocatore ha impostato il limite a: " + expectedPlayers);
-                        } catch (NumberFormatException e) {
-                            expectedPlayers = 2;
-                        }
-                    }
+        addBehaviour(new ManageTurnBehaviour());
 
-                    // Controlliamo se c'è ancora posto nella lobby
-                    if (gameState.getActivePlayers().size() < expectedPlayers) {
-                        String playerName = msg.getSender().getName();
-
-                        // Piccolo controllo di sicurezza per evitare doppi ingressi
-                        if (findPlayerByAgentName(playerName) == null) {
-                            Player player = new Player(playerName, msg.getSender().getLocalName());
-                            gameState.addPlayer(player);
-
-                            System.out.println("Giocatore registrato: " + playerName + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
-
-                            ACLMessage reply = msg.createReply();
-                            reply.setPerformative(ACLMessage.CONFIRM);
-                            reply.setContent(Messages.JOINED);
-                            send(reply);
-
-                            // Se abbiamo raggiunto il numero richiesto dal primo giocatore, iniziamo
-                            if (gameState.getActivePlayers().size() == expectedPlayers) {
-                                System.out.println("Lobby piena! Avvio partita in corso...");
-                                myAgent.removeBehaviour(this);
-                                addBehaviour(new StartGameBehaviour());
-                            }
-                        }
-                    } else {
-                        // La lobby è piena, rifiutiamo i giocatori in eccesso
-                        ACLMessage reply = msg.createReply();
-                        reply.setPerformative(ACLMessage.REFUSE);
-                        reply.setContent("LOBBY_FULL"); // Potresti voler aggiungere questo al tuo file Messages
-                        send(reply);
-                    }
-                }
-            } else {
-                block();
-            }
-        }
     }
 
     /**
-     * Tramite il DeckBuilder viene costruito il mazzo e vengono distribuite le carte ai giocatori.
+     * Metodo che utilizziamo per notificare tutti i player che il gameMaster è cambiato
      */
-    private class StartGameBehaviour extends OneShotBehaviour {
-        @Override
-        public void action() {
-            deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
-            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
-            DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
+    private void broadcastNewMaster() {
+        DFAgentDescription template = new DFAgentDescription();
+        ServiceDescription sd = new ServiceDescription();
+        sd.setType("player");
+        template.addServices(sd);
 
-            for (Player player : gameState.getActivePlayers()) {
+        try {
+            DFAgentDescription[] results = DFService.search(this, template);
+            for (DFAgentDescription dfd : results) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.addReceiver(new AID(player.getAgentName(), true));
-                msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
+                msg.addReceiver(dfd.getName());
+                msg.setContent(Messages.NEW_MASTER);
                 send(msg);
             }
-            System.out.println("Partita avviata!");
-            startHeartbeat();
-            broadcastPlayersList();
-            addBehaviour(new ManageTurnBehaviour());
-        }
+            System.out.println("Notifica NEW_MASTER inviata a " + results.length + " giocatori.");
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
+    /**
+     * Cancelliamo la vecchia registrazione del backup al DF e ci registriamo con il tipo game-master
+     */
+    private void updateDFtoPrimary() {
+        try {
+            DFService.deregister(this);
 
+            // Poi ci registriamo come game-master
+            DFAgentDescription dfd = new DFAgentDescription();
+            dfd.setName(getAID());
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("game-master");
+            sd.setName("exploding-kittens-promoted");
+            dfd.addServices(sd);
+            DFService.register(this, dfd);
+            System.out.println("Backup registrato come nuovo GameMaster nel DF.");
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    /**
+     * Replicazione logica del GameMasterAgent primario.
+     */
     private class ManageTurnBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
@@ -464,13 +498,6 @@ public class GameMasterAgent extends Agent {
 
         private void handleDefuse(ACLMessage msg) {
             String[] parts = msg.getContent().split(":");
-            int position   = Integer.parseInt(parts[1]);
-
-            deck.insertCard(
-                    new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
-                    position
-            );
-
             System.out.println("Prime carte del mazzo dopo Defuse: ");
             deck.getCards().stream().limit(3).forEach(c -> System.out.println("- " + c.getType()));
             notifyRefresh(msg.getSender());
@@ -518,6 +545,13 @@ public class GameMasterAgent extends Agent {
         }
     }
 
+    private void announceWinner() {
+        Player winner = gameState.getWinner();
+        if (winner != null) {
+            broadcastToAll(Messages.WINNER + winner.getNickname());
+            System.out.println("Vincitore: " + winner.getNickname());
+        }
+    }
 
     private void broadcastToAll(String content) {
         for (Player p : gameState.getActivePlayers()) {
@@ -528,83 +562,10 @@ public class GameMasterAgent extends Agent {
         }
     }
 
-    private void announceWinner() {
-        Player winner = gameState.getWinner();
-        if (winner != null) {
-            broadcastToAll(Messages.WINNER + winner.getNickname());
-            System.out.println("Vincitore: " + winner.getNickname());
-        }
-    }
-
     private Player findPlayerByAgentName(String agentName) {
         return gameState.getActivePlayers().stream()
                 .filter(p -> p.getAgentName().equals(agentName))
                 .findFirst()
                 .orElse(null);
     }
-
-    private void broadcastPlayersList() {
-        StringBuilder sb = new StringBuilder("PLAYERS_LIST:");
-        for (int i = 0; i < gameState.getActivePlayers().size(); i++) {
-            sb.append(gameState.getActivePlayers().get(i).getNickname());
-            if (i < gameState.getActivePlayers().size() - 1) sb.append(",");
-        }
-        broadcastToAll(sb.toString());
-    }
-
-    private void startHeartbeat() {
-        addBehaviour(new TickerBehaviour(this, 3000) {
-            @Override
-            protected void onTick() {
-                if(backupMasterAID == null){
-                    backupMasterAID = findBackup();
-                }
-                else{
-                    ACLMessage hb = new ACLMessage(ACLMessage.INFORM);
-                    hb.addReceiver(backupMasterAID);
-                    hb.setContent(Messages.HEARTBEAT + ":" + serializeState());
-                    myAgent.send(hb);
-                }
-            }
-        });
-    }
-
-    private AID findBackup() {
-        DFAgentDescription template = new DFAgentDescription();
-        ServiceDescription sd = new ServiceDescription();
-        sd.setType("backup-master");
-        template.addServices(sd);
-        try {
-            DFAgentDescription[] result = DFService.search(this, template);
-            if (result.length > 0) return result[0].getName();
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
-    }
-
-    /**
-     * Metodo che ricostruisce una stringa rappresentante il GameState corrente
-     * @return una stringa che rappresenta lo stato del gioco
-     */
-    private String serializeState() {
-        StringBuilder sb = new StringBuilder();
-
-        // 1. Indice giocatore corrente e turni rimanenti
-        sb.append(gameState.getCurrentPlayerIndex()).append(":");
-        sb.append(gameState.getTurnsToPlay()).append(":");
-
-        // 2. Il Mazzo (tutte le carte in ordine)
-        String deckState = deck.getCards().stream()
-                .map(card -> card.getType().name())
-                .collect(Collectors.joining(","));
-        sb.append(deckState).append(":");
-
-        // 3. Giocatori attivi (AgentName e Nickname)
-        String playersState = gameState.getActivePlayers().stream()
-                .map(p -> p.getAgentName() + "," + p.getNickname())
-                .collect(Collectors.joining("|"));
-        sb.append(playersState);
-
-        return sb.toString();
-    }
 }
-
