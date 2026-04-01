@@ -17,7 +17,7 @@ public class GameMasterAgent extends Agent {
 
     private GameState gameState;
     private Deck deck;
-    private int expectedPlayers;
+    private int expectedPlayers = -1; //significa che non è ancora stato impostato
 
     private static final String CAT_LOG = "[GameMaster - CAT_CARD] ";
     @Override
@@ -39,8 +39,6 @@ public class GameMasterAgent extends Agent {
             e.printStackTrace();
         }
 
-        Object[] args = getArguments();
-        expectedPlayers = (args != null) ? Integer.parseInt(args[0].toString()) : 2;
         gameState = new GameState();
         deck      = new Deck();
 
@@ -55,28 +53,64 @@ public class GameMasterAgent extends Agent {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
             ACLMessage msg = myAgent.receive(mt);
 
-            if (msg != null && msg.getContent().equals(Messages.JOIN)) {
-                String playerName = msg.getSender().getName();
-                Player player = new Player(playerName, msg.getSender().getLocalName());
-                gameState.addPlayer(player);
+            if (msg != null) {
+                String content = msg.getContent();
 
-                System.out.println("Giocatore registrato: " + playerName);
+                // Controlliamo se il messaggio inizia con la costante JOIN
+                if (content != null && content.startsWith(Messages.JOIN)) {
 
-                ACLMessage reply = msg.createReply();
-                reply.setPerformative(ACLMessage.CONFIRM);
-                reply.setContent(Messages.JOINED);
-                send(reply);
+                    // Se expectedPlayers è -1, questo è il PRIMO giocatore!
+                    if (expectedPlayers == -1) {
+                        try {
+                            // Estrapoliamo il numero di giocatori (es. da "JOIN:4")
+                            String[] parts = content.split(":");
+                            if (parts.length > 1) {
+                                expectedPlayers = Integer.parseInt(parts[1]);
+                            } else {
+                                expectedPlayers = 2; // Valore di fallback se il parsing fallisce
+                            }
+                            System.out.println("Lobby creata! Il primo giocatore ha impostato il limite a: " + expectedPlayers);
+                        } catch (NumberFormatException e) {
+                            expectedPlayers = 2;
+                        }
+                    }
 
-                if (gameState.getActivePlayers().size() == expectedPlayers) {
-                    myAgent.removeBehaviour(this);
-                    addBehaviour(new StartGameBehaviour());
+                    // Controlliamo se c'è ancora posto nella lobby
+                    if (gameState.getActivePlayers().size() < expectedPlayers) {
+                        String playerName = msg.getSender().getName();
+
+                        // Piccolo controllo di sicurezza per evitare doppi ingressi
+                        if (findPlayerByAgentName(playerName) == null) {
+                            Player player = new Player(playerName, msg.getSender().getLocalName());
+                            gameState.addPlayer(player);
+
+                            System.out.println("Giocatore registrato: " + playerName + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
+
+                            ACLMessage reply = msg.createReply();
+                            reply.setPerformative(ACLMessage.CONFIRM);
+                            reply.setContent(Messages.JOINED);
+                            send(reply);
+
+                            // Se abbiamo raggiunto il numero richiesto dal primo giocatore, iniziamo
+                            if (gameState.getActivePlayers().size() == expectedPlayers) {
+                                System.out.println("Lobby piena! Avvio partita in corso...");
+                                myAgent.removeBehaviour(this);
+                                addBehaviour(new StartGameBehaviour());
+                            }
+                        }
+                    } else {
+                        // La lobby è piena, rifiutiamo i giocatori in eccesso
+                        ACLMessage reply = msg.createReply();
+                        reply.setPerformative(ACLMessage.REFUSE);
+                        reply.setContent("LOBBY_FULL"); // Potresti voler aggiungere questo al tuo file Messages
+                        send(reply);
+                    }
                 }
             } else {
                 block();
             }
         }
     }
-
 
     /**
      * Tramite il DeckBuilder viene costruito il mazzo e vengono distribuite le carte ai giocatori.
@@ -427,9 +461,11 @@ public class GameMasterAgent extends Agent {
             String[] parts = msg.getContent().split(":");
             int position   = Integer.parseInt(parts[1]);
 
-            // DEBUG: Stampa le prime 3 carte per vedere se il Kitten è lì
-            System.out.println("Prime carte del mazzo dopo Defuse: ");
-            deck.getCards().stream().limit(3).forEach(c -> System.out.println("- " + c.getType()));
+            deck.insertCard(
+                    new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
+                    position
+            );
+
             notifyRefresh(msg.getSender());
 
             ACLMessage reply = msg.createReply();

@@ -20,7 +20,7 @@ public class ServerMain {
         AgentController gameMaster = mainContainer.createNewAgent(
                 "GameMaster",
                 "exploding_kittens.remote.GameMasterAgent",
-                new Object[]{ "2" }
+                new Object[]{ }
         );
 
         gameMaster.start();

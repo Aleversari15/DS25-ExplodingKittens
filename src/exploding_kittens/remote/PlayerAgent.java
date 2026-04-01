@@ -24,11 +24,19 @@ public class PlayerAgent extends Agent {
     private AID gameMasterAID;
     private String nickname;
     private GameView view;
+    private int requestedPlayers;
 
     @Override
     protected void setup() {
         Object[] args = getArguments();
         nickname = (args != null) ? args[0].toString() : getLocalName();
+
+        if (args != null && args.length >= 2) {
+            requestedPlayers = (int) args[1];
+        } else {
+            requestedPlayers = 2; // Default
+        }
+
         view = new GameView();
         view.showWelcome(nickname);
         view.showWaitingForPlayers();
@@ -97,9 +105,9 @@ public class PlayerAgent extends Agent {
 
             ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
             msg.addReceiver(gameMasterAID);
-            msg.setContent(Messages.JOIN);
+            msg.setContent(Messages.JOIN + ":" + requestedPlayers);
             send(msg);
-
+            System.out.println(nickname + " inviata richiesta di join per partita da " + requestedPlayers);
             addBehaviour(new WaitForConfirmBehaviour());
         }
     }
@@ -107,13 +115,24 @@ public class PlayerAgent extends Agent {
     private class WaitForConfirmBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CONFIRM);
+            MessageTemplate mt = MessageTemplate.or(
+                    MessageTemplate.MatchPerformative(ACLMessage.CONFIRM),
+                    MessageTemplate.MatchPerformative(ACLMessage.REFUSE)
+            );
             ACLMessage msg = myAgent.receive(mt);
 
-            if (msg != null && msg.getContent().equals(Messages.JOINED)) {
-                System.out.println(nickname + " registrato alla partita!");
-                myAgent.removeBehaviour(this);
-                addBehaviour(new ListenFromGameMasterBehaviour());
+            if (msg != null) {
+                if (msg.getPerformative() == ACLMessage.CONFIRM) {
+                    System.out.println(nickname + " registrato alla partita!");
+                    myAgent.removeBehaviour(this);
+                    addBehaviour(new ListenFromGameMasterBehaviour());
+                } else if (msg.getPerformative() == ACLMessage.REFUSE) {
+                    // Gestione lobby piena
+                    view.showError("Impossibile entrare: la lobby è piena o la partita è già iniziata.");
+                    System.out.println("Accesso negato dal GameMaster: Lobby Piena.");
+                    // Opzionale: chiudere l'agente o tornare al setup
+                    // myAgent.doDelete();
+                }
             } else {
                 block();
             }

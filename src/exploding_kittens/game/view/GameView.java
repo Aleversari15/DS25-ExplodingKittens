@@ -525,6 +525,7 @@ public class GameView {
     }
 
     public int askDefusePosition(int deckSize) {
+        inputQueue.clear();
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(BG_PANEL);
 
