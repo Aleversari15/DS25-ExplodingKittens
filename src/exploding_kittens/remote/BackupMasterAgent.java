@@ -57,52 +57,130 @@ public class BackupMasterAgent extends Agent {
         });
     }
 
+    //TODO rimuovere tutte le stampe per il debug
     private void reconstructState(String data) {
         try {
-            System.out.println("DEBUG DATA RICEVUTI: " + data);
-            String[] parts = data.split(":", 4); // Usiamo -1 per non ignorare campi vuoti
-            if (parts.length < 4){
-                System.err.println("Dati insufficienti! Parti trovate: " + parts.length);
+            System.out.println("\n================ BACKUP RECONSTRUCTION ================");
+            System.out.println("RAW DATA LENGTH = " + data.length());
+            System.out.println("RAW DATA = " + data);
+
+            String[] parts = data.split(":", 4);
+
+            System.out.println("SPLIT PARTS COUNT = " + parts.length);
+            for (int i = 0; i < parts.length; i++) {
+                System.out.println("PART[" + i + "] = " + parts[i]);
+            }
+
+            if (parts.length < 4) {
+                System.err.println("❌ Dati insufficienti! Abort restore");
                 return;
             }
 
             if (this.gameState == null) this.gameState = new GameState();
             if (this.deck == null) this.deck = new Deck();
 
-            // 1. Ripristino Turni e Indice
+            // =====================
+            // 1. TURN STATE
+            // =====================
             int currentIndex = Integer.parseInt(parts[0]);
             int turnsToPlay = Integer.parseInt(parts[1]);
+
+            System.out.println("\n--- TURN STATE ---");
+            System.out.println("currentIndex = " + currentIndex);
+            System.out.println("turnsToPlay  = " + turnsToPlay);
+
             gameState.setCurrentPlayerIndex(currentIndex);
             gameState.setTurnsToPlay(turnsToPlay);
 
-            // 2. Ripristino Mazzo
+            // =====================
+            // 2. DECK RESTORE
+            // =====================
             List<Card> restoredCards = new ArrayList<>();
+
+            System.out.println("\n--- DECK RESTORE ---");
+            System.out.println("RAW DECK STRING = [" + parts[2] + "]");
+
             if (!parts[2].isEmpty()) {
-                for (String cardName : parts[2].split(",")) {
-                    restoredCards.add(new Card(CardType.valueOf(cardName)));
+                String[] cards = parts[2].split(",");
+                System.out.println("CARD COUNT = " + cards.length);
+
+                for (int i = 0; i < cards.length; i++) {
+                    String cardName = cards[i];
+                    System.out.println("CARD[" + i + "] = " + cardName);
+
+                    try {
+                        CardType type = CardType.valueOf(cardName);
+                        restoredCards.add(new Card(type));
+                    } catch (Exception e) {
+                        System.err.println("❌ INVALID CARD TYPE: " + cardName);
+                    }
                 }
             }
+
             deck.setCards(restoredCards);
 
-            // 3. Ripristino Giocatori
+            System.out.println("FINAL DECK SIZE = " + restoredCards.size());
+            System.out.println("TOP 5 CARDS:");
+
+            for (int i = 0; i < Math.min(5, restoredCards.size()); i++) {
+                System.out.println(" - " + restoredCards.get(i).getType());
+            }
+
+            // =====================
+            // 3. PLAYERS RESTORE
+            // =====================
             List<Player> restoredPlayers = new ArrayList<>();
+
+            System.out.println("\n--- PLAYERS RESTORE ---");
+            System.out.println("RAW PLAYERS STRING = [" + parts[3] + "]");
+
             if (!parts[3].isEmpty()) {
-                for (String pData : parts[3].split("\\|")) {
+                String[] players = parts[3].split("\\|");
+                System.out.println("PLAYER COUNT = " + players.length);
+
+                for (int i = 0; i < players.length; i++) {
+                    String pData = players[i];
+                    System.out.println("PLAYER[" + i + "] RAW = " + pData);
+
                     String[] pParts = pData.split(",");
+
+                    if (pParts.length < 2) {
+                        System.err.println("❌ INVALID PLAYER DATA: " + pData);
+                        continue;
+                    }
+
                     String agentAID = pParts[0];
                     String nickname = pParts[1];
 
-                    if(nickname.startsWith("Player_")){
+                    System.out.println(" -> agentAID = " + agentAID);
+                    System.out.println(" -> nickname = " + nickname);
+
+                    if (nickname.startsWith("Player_")) {
                         nickname = nickname.replaceFirst("Player_", "");
                     }
+
                     restoredPlayers.add(new Player(agentAID, nickname));
                 }
             }
+
             gameState.setActivePlayers(restoredPlayers);
-            System.out.println("DEBUG: Stato ricostruito. Giocatori: " + restoredPlayers.size());
+
+            System.out.println("\n--- FINAL STATE SUMMARY ---");
+            System.out.println("Players restored = " + restoredPlayers.size());
+            System.out.println("Active players list:");
+
+            for (Player p : restoredPlayers) {
+                System.out.println(" - " + p.getNickname() + " | " + p.getAgentName());
+            }
+
+            System.out.println("Current index = " + gameState.getCurrentPlayerIndex());
+            System.out.println("TurnsToPlay   = " + gameState.getTurnsToPlay());
+
+            System.out.println("=============== RECONSTRUCTION COMPLETE ===============\n");
 
         } catch (Exception e) {
-            System.err.println("Errore durante la ricostruzione dello stato: " + e.getMessage());
+            System.err.println("❌ ERROR DURING RECONSTRUCTION: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -207,11 +285,54 @@ public class BackupMasterAgent extends Agent {
         public void action() {
             ACLMessage msg = myAgent.receive();
 
+            //TODO rimuovere dopo debug
+            if (msg != null) {
+                System.out.println("\n================ BACKUP MASTER RECEIVED MESSAGE ================");
+                System.out.println("FROM: " + msg.getSender().getLocalName());
+                System.out.println("PERFORMATIVE: " + ACLMessage.getPerformative(msg.getPerformative()));
+                System.out.println("CONTENT: " + msg.getContent());
+                System.out.println("CONVERSATION-ID: " + msg.getConversationId());
+                System.out.println("===============================================================\n");
+
+                String content = msg.getContent();
+
+                if(content != null && content.startsWith(Messages.HEARTBEAT)) {
+                    System.out.println("💓 HEARTBEAT RECEIVED");
+                    lastHeartbeatTime = System.currentTimeMillis();
+                    String stateData = msg.getContent().substring(Messages.HEARTBEAT.length() + 1);
+                    reconstructState(stateData);
+                } else {
+                    System.out.println("ℹ️ Message NOT heartbeat → ignored by cyclic (handled elsewhere?)");
+                }
+
+            } else {
+                block();
+            }
+
+            if (msg == null) {
+                System.out.println("⛔ NULL MESSAGE → block()");
+                block();
+                return;
+            }
+
+            if (msg.getPerformative() != ACLMessage.REQUEST) {
+                System.out.println("⚠️ IGNORED MESSAGE (not REQUEST): " +
+                        ACLMessage.getPerformative(msg.getPerformative()));
+                block();
+                return;
+            }
+
+
             if (msg != null) {
                 String content = msg.getContent();
 
                 if (content.startsWith(Messages.HAND_RESPONSE)) {
                     String serializedHand = content.substring(Messages.HAND_RESPONSE.length());
+
+                    System.out.println("🖐 HAND RESPONSE RICEVUTO");
+                    System.out.println("pendingAction=" + pendingAction);
+                    System.out.println("pendingCatTarget=" + pendingCatTarget);
+                    System.out.println("RAW HAND=" + content);
 
                     if (pendingCatTarget != null) {
                         if (pendingAction != null) {
@@ -272,6 +393,8 @@ public class BackupMasterAgent extends Agent {
 
 
             if (content.startsWith(Messages.PLAY)) {
+                System.out.println("🎴 MESSAGGIO PLAY RICEVUTO : " + content);
+
                 String cardTypeName = content.substring(Messages.PLAY.length());
                 CardType type = CardType.valueOf(cardTypeName);
 
