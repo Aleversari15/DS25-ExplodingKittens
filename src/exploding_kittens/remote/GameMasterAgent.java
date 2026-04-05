@@ -196,8 +196,14 @@ public class GameMasterAgent extends Agent {
                     return;
                 }
 
-                if (msg.getPerformative() != ACLMessage.REQUEST) {
+                //TODO: dopo verifica, modificare anche backup agent
+                if (msg.getPerformative() != ACLMessage.REQUEST && msg.getPerformative() != ACLMessage.INFORM ) {
                     block();
+                    return;
+                }
+
+                if (content.equals(Messages.PLAYER_ELIMINATED)) {
+                    handleElimination(msg);
                     return;
                 }
 
@@ -220,8 +226,6 @@ public class GameMasterAgent extends Agent {
                     send(query);
                 } else if (content.startsWith(Messages.DEFUSE_PLAY)) {
                     handleDefuse(msg);
-                } else if (content.equals(Messages.PLAYER_ELIMINATED)) {
-                    handleElimination(msg);
                 }
 
             } else {

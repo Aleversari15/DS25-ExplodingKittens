@@ -19,7 +19,7 @@ public class DeckBuilder {
     private static List<Card> createStandardDeck(int playerCount) {
         List<Card> cards = new ArrayList<>();
 
-        for (int i = 0; i < playerCount + 2; i++)
+        for (int i = 0; i < playerCount + 1; i++)
             cards.add(new Card(CardType.DEFUSE, "Defuse", "Neutralizza un Exploding Kitten"));
         for (int i = 0; i < 4; i++)
             cards.add(new Card(CardType.SKIP, "Skip", "Termina il tuo turno senza pescare"));
@@ -59,7 +59,7 @@ public class DeckBuilder {
      */
     public static void insertExplodingKittens(Deck deck, int numPlayers) {
         Random random = new Random();
-        for (int i = 0; i < numPlayers - 1; i++) {
+        for (int i = 0; i < numPlayers +1; i++) {
             deck.insertCard(
                     new Card(CardType.EXPLODING_KITTEN, "Exploding Kitten", "Sei esploso!"),
                     random.nextInt(deck.size() + 1)

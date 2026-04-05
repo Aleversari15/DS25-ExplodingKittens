@@ -61,13 +61,14 @@ public class GameView {
     private void loadCardImages() {
         // Mappa CardType -> nome file img
         Map<String, String> fileNames = new HashMap<>();
-        fileNames.put("EXPLODING_KITTEN", "ExplodingKitten.jpg");
-        fileNames.put("DEFUSE",           "Defuse.jpg");
-        fileNames.put("SKIP",             "Skip.jpg");
-        fileNames.put("ATTACK",           "Attack.jpg");
-        fileNames.put("SHUFFLE",          "Shuffle.jpg");
-        fileNames.put("SEE_THE_FUTURE",   "SeetheFuture.jpg");
-        fileNames.put("CAT_CARD",         "CartaGatto.jpg");
+        fileNames.put("EXPLODING_KITTEN",  "ExplodingKitten.jpg");
+        fileNames.put("DEFUSE",            "Defuse.jpg");
+        fileNames.put("SKIP",              "Skip.jpg");
+        fileNames.put("ATTACK",            "Attack.jpg");
+        fileNames.put("SHUFFLE",           "Shuffle.jpg");
+        fileNames.put("SEE_THE_FUTURE",    "SeetheFuture.jpg");
+        fileNames.put("CAT_CARD",          "CartaGatto.jpg");
+        fileNames.put("WINNER",            "winner.png") ;
 
         for (Map.Entry<String, String> entry : fileNames.entrySet()) {
             try {
@@ -222,6 +223,7 @@ public class GameView {
         actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         actionPanel.setBackground(BG_DARK);
 
+        //TODO: disabilitare bottone quando non è il turno del giocatore (sembra essere disabilitato solo all'inizio)
         JButton drawBtn    = buildButton("PESCA",          ACCENT_GREEN);
         drawBtn.addActionListener(e    -> inputQueue.offer("DRAW"));
         actionPanel.add(drawBtn);
@@ -276,11 +278,8 @@ public class GameView {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Effetto hover: se il mouse è sopra, schiarisci leggermente il fondo
                 g2.setColor(BG_CARD);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
-
                 g2.setColor(accent);
                 g2.setStroke(new BasicStroke(2.0f));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 12, 12));
@@ -293,11 +292,10 @@ public class GameView {
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // --- LOGICA DI CLICK ---
+        // LOGICA CLICK
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mousePressed(java.awt.event.MouseEvent e) {
-                // Permetti il click solo se è il turno del giocatore (bottoni abilitati)
                 if (actionPanel.getComponent(0).isEnabled()) {
                     handleCardClick(cardType);
                 }
@@ -363,15 +361,44 @@ public class GameView {
     }
 
     public void showGameOver(String winnerNickname) {
-        SwingUtilities.invokeLater(() -> {
-            appendLog("\n[FINE] Vince: " + winnerNickname + "!");
-            turnLabel.setText("Vince: " + winnerNickname);
-            turnLabel.setForeground(ACCENT_ORANGE);
-            setActionsEnabled(false);
-            JOptionPane.showMessageDialog(frame,
-                    winnerNickname + " ha vinto la partita!",
-                    "Partita terminata", JOptionPane.INFORMATION_MESSAGE);
-        });
+            SwingUtilities.invokeLater(() -> {
+                appendLog("\n[FINE] Vince: " + winnerNickname + "!");
+                turnLabel.setText("Vince: " + winnerNickname);
+                turnLabel.setForeground(ACCENT_GREEN);
+                setActionsEnabled(false);
+
+                JPanel panel = new JPanel(new BorderLayout(10, 10));
+                panel.setBackground(BG_PANEL);
+
+                Image kittenImg = cardImages.get("WINNER");
+                if (kittenImg != null) {
+                    Image scaled = kittenImg.getScaledInstance(100, 130, Image.SCALE_SMOOTH);
+                    JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+                    imgLabel.setBorder(BorderFactory.createLineBorder(ACCENT_GREEN, 2));
+                    panel.add(imgLabel, BorderLayout.WEST);
+                }
+
+                JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 6));
+                textPanel.setBackground(BG_PANEL);
+
+                JLabel titleLabel = new JLabel(winnerNickname + " HA VINTO!");
+                titleLabel.setFont(new Font("Georgia", Font.BOLD, 14));
+                titleLabel.setForeground(ACCENT_GREEN);
+
+                JLabel msgLabel = new JLabel("Partita terminata.");
+                msgLabel.setFont(FONT_LABEL);
+                msgLabel.setForeground(TEXT_PRIMARY);
+
+                textPanel.add(titleLabel);
+                textPanel.add(msgLabel);
+                panel.add(textPanel, BorderLayout.CENTER);
+
+                UIManager.put("OptionPane.background", BG_PANEL);
+                UIManager.put("Panel.background", BG_PANEL);
+
+                JOptionPane.showMessageDialog(frame, panel,
+                        "Vincitore", JOptionPane.PLAIN_MESSAGE);
+            });
     }
 
     public void showYourTurn() {
