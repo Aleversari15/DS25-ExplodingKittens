@@ -398,7 +398,9 @@ public class GameView {
 
                 JOptionPane.showMessageDialog(frame, panel,
                         "Vincitore", JOptionPane.PLAIN_MESSAGE);
+                frame.dispose();
             });
+
     }
 
     public void showYourTurn() {
@@ -522,6 +524,7 @@ public class GameView {
 
             JOptionPane.showMessageDialog(frame, panel,
                     "Eliminato", JOptionPane.PLAIN_MESSAGE);
+            frame.dispose();
         });
     }
 
@@ -635,12 +638,37 @@ public class GameView {
         return result[0];
     }
 
-
-
     private void askCatCardTarget() {
-        String target = JOptionPane.showInputDialog(frame,
-                "Nome del giocatore da cui vuoi rubare:",
-                "Cat Card", JOptionPane.QUESTION_MESSAGE);
+        java.util.List<String> validPlayers = new java.util.ArrayList<>();
+        String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
+
+        for (int i = 0; i < playersListModel.size(); i++) {
+            String playerName = playersListModel.getElementAt(i);
+            if (playerName.startsWith(" • ")) {
+                playerName = playerName.substring(3);
+            }
+
+            if (!playerName.equals("Player_"+myName)) {
+                validPlayers.add(playerName);
+            }
+        }
+
+        if (validPlayers.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Nessun bersaglio disponibile!", "Cat Card", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String[] options = validPlayers.toArray(new String[0]);
+        String target = (String) JOptionPane.showInputDialog(
+                frame,
+                "Seleziona il giocatore da cui vuoi rubare:",
+                "Cat Card",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
         if (target != null && !target.isBlank()) {
             inputQueue.offer("CAT_CARD:" + target.trim());
         }
