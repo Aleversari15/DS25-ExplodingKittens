@@ -97,6 +97,12 @@ public class BackupMasterAgent extends Agent {
          * @param content
          */
         private void handleAsMaster(ACLMessage msg, String content) {
+
+            if (content.startsWith(Messages.JOIN)) {
+                handleJoinRequest(msg, content);
+                return;
+            }
+
             if (content.startsWith(Messages.HAND_RESPONSE)) {
                 String serializedHand = content.substring(Messages.HAND_RESPONSE.length());
                 if (pendingCatTarget != null && pendingAction != null) {
@@ -301,6 +307,45 @@ public class BackupMasterAgent extends Agent {
             nextTurn();
         }
 
+        private void handleJoinRequest(ACLMessage msg, String content) {
+
+            String playerName = msg.getSender().getName();
+            //controlla che non ci siano già giocatori con lo stesso nome
+            Player existing = findPlayerByAgentName(playerName);
+
+            if (existing == null) {
+                Player newPlayer = new Player(playerName, msg.getSender().getLocalName());
+                gameState.addPlayer(newPlayer);
+                System.out.println("Giocatore ri-annunciato aggiunto: " + playerName);
+            }
+
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.CONFIRM);
+            reply.setContent(Messages.JOINED);
+            send(reply);
+
+            int limit = 2; // TODO: Valore di default o recuperato
+            if (gameState.getActivePlayers().size() == limit) {
+                System.out.println("Lobby piena dopo il failover! Avvio partita...");
+                deck = DeckBuilder.prepareBaseDeck(limit);
+                Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+                DeckBuilder.insertExplodingKittens(deck, limit);
+
+                for (Player p : gameState.getActivePlayers()) {
+                    ACLMessage handMsg = new ACLMessage(ACLMessage.INFORM);
+                    handMsg.addReceiver(new AID(p.getAgentName(), true));
+                    handMsg.setContent(Messages.HAND_INIT + hands.get(p.getAgentName()));
+                    send(handMsg);
+                }
+
+                gameState.setCurrentPlayerIndex(0);
+                nextTurn();
+            }
+
+            System.out.println("[DEBUG-BACKUP] Ricevuta richiesta JOIN da: " + msg.getSender().getLocalName());
+            System.out.println("[DEBUG-BACKUP] Totale giocatori ora: " + gameState.getActivePlayers().size() + "/" + limit);
+        }
+
         private void handleAttack(ACLMessage msg) {
             notifyRefresh(msg.getSender());
             ACLMessage reply = msg.createReply();
@@ -400,13 +445,14 @@ public class BackupMasterAgent extends Agent {
 
 
     private void promoteToMaster() {
-        System.out.println("GameMaster primario caduto. Mi promuovo a Master!");
+        System.out.println("[DEBUG-BACKUP] !!! PROMOZIONE !!! Sono il nuovo Master. Giocatori conosciuti: " +
+                gameState.getActivePlayers().stream().map(Player::getNickname).collect(Collectors.joining(",")));
         promoted = true;
 
         updateDFtoPrimary();
         broadcastNewMaster();
 
-        if (gameState != null && !gameState.isGameOver()) {
+        if (gameState != null && !gameState.isGameOver() && !gameState.getActivePlayers().isEmpty()) {
             Player current = gameState.getCurrentPlayer();
             for (Player p : gameState.getActivePlayers()) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -471,35 +517,63 @@ public class BackupMasterAgent extends Agent {
             if (gameState == null) gameState = new GameState();
             if (deck == null)      deck      = new Deck();
 
-            gameState.setCurrentPlayerIndex(Integer.parseInt(parts[0]));
-            gameState.setTurnsToPlay(Integer.parseInt(parts[1]));
+            // 1. Indice Giocatore Corrente
+            try {
+                gameState.setCurrentPlayerIndex(Integer.parseInt(parts[0]));
+            } catch (NumberFormatException e) {
+                gameState.setCurrentPlayerIndex(0);
+            }
 
+            // 2. Turni Rimanenti
+            try {
+                gameState.setTurnsToPlay(Integer.parseInt(parts[1]));
+            } catch (NumberFormatException e) {
+                gameState.setTurnsToPlay(1);
+            }
+
+            // 3. Ricostruzione Mazzo
             List<Card> restoredCards = new ArrayList<>();
-            if (!parts[2].isEmpty()) {
-                for (String cardName : parts[2].split(",")) {
-                    if (!cardName.isEmpty()) {
-                        restoredCards.add(new Card(CardType.valueOf(cardName)));
+            String deckData = parts[2];
+            if (!deckData.isEmpty() && !deckData.equals("WAITING_LOBBY") && !deckData.contains("WAITING_FOR_PLAYERS")) {
+                for (String cardName : deckData.split(",")) {
+                    String name = cardName.trim();
+                    if (!name.isEmpty()) {
+                        try {
+                            restoredCards.add(new Card(CardType.valueOf(name)));
+                        } catch (Exception e) { /* Ignora tipi carta errati */ }
                     }
                 }
             }
             deck.setCards(restoredCards);
 
-            List<Player> restoredPlayers = new ArrayList<>();
-            if (!parts[3].isEmpty()) {
-                for (String pData : parts[3].split("\\|")) {
+            // 4. Ricostruzione Giocatori
+            String playersPart = parts[3];
+            if (!playersPart.isEmpty() && !playersPart.equals("null")) {
+                List<Player> restoredPlayers = new ArrayList<>();
+                for (String pData : playersPart.split("\\|")) {
                     String[] pParts = pData.split(",");
                     if (pParts.length >= 2) {
-                        String nickname = pParts[1].startsWith("Player_")
-                                ? pParts[1].replaceFirst("Player_", "")
-                                : pParts[1];
-                        restoredPlayers.add(new Player(pParts[0], nickname));
+                        // Pulizia nickname (Player_Giocatore1 -> Giocatore1)
+                        String rawNick = pParts[1];
+                        String cleanNick = rawNick.replace("Player_", "");
+                        restoredPlayers.add(new Player(pParts[0], cleanNick));
                     }
                 }
+                // Aggiorna la lista solo se abbiamo trovato dei giocatori
+                if (!restoredPlayers.isEmpty()) {
+                    gameState.setActivePlayers(restoredPlayers);
+                }
             }
-            gameState.setActivePlayers(restoredPlayers);
 
         } catch (Exception e) {
             System.err.println("Errore ricostruzione stato: " + e.getMessage());
+            e.printStackTrace(); // Utile in debug per vedere l'intera traccia dell'errore
+        }
+
+
+        if (gameState.getActivePlayers() != null) {
+            System.out.println("[DEBUG-BACKUP] Stato sincronizzato. Giocatori attivi: " +
+                    gameState.getActivePlayers().size() + " | Turno di: " + gameState.getCurrentPlayerIndex());
         }
     }
 

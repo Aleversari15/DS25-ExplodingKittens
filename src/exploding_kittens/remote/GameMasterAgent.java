@@ -47,6 +47,8 @@ public class GameMasterAgent extends Agent {
         gameState = new GameState();
         deck      = new Deck();
 
+        startHeartbeat();
+
         System.out.println("GameMaster avviato, aspetto " + expectedPlayers + " giocatori...");
         addBehaviour(new WaitForPlayersBehaviour());
     }
@@ -80,6 +82,8 @@ public class GameMasterAgent extends Agent {
                         }
                     }
 
+
+
                     // Controlliamo se c'è ancora posto nella lobby
                     if (gameState.getActivePlayers().size() < expectedPlayers) {
                         String playerName = msg.getSender().getName();
@@ -88,6 +92,8 @@ public class GameMasterAgent extends Agent {
                         if (findPlayerByAgentName(playerName) == null) {
                             Player player = new Player(playerName, msg.getSender().getLocalName());
                             gameState.addPlayer(player);
+
+                            sincronize();
 
                             System.out.println("Giocatore registrato: " + playerName + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
 
@@ -117,6 +123,16 @@ public class GameMasterAgent extends Agent {
         }
     }
 
+    private void sincronize() {
+        if(backupMasterAID == null) backupMasterAID = findBackup();
+        if(backupMasterAID != null) {
+            ACLMessage hb = new ACLMessage(ACLMessage.INFORM);
+            hb.addReceiver(backupMasterAID);
+            hb.setContent(Messages.HEARTBEAT + ":" + serializeState());
+            send(hb);
+        }
+    }
+
     /**
      * Tramite il DeckBuilder viene costruito il mazzo e vengono distribuite le carte ai giocatori.
      */
@@ -134,7 +150,6 @@ public class GameMasterAgent extends Agent {
                 send(msg);
             }
             System.out.println("Partita avviata!");
-            startHeartbeat();
             broadcastPlayersList();
             addBehaviour(new ManageTurnBehaviour());
         }
@@ -557,9 +572,11 @@ public class GameMasterAgent extends Agent {
     }
 
     private void startHeartbeat() {
+
         addBehaviour(new TickerBehaviour(this, 3000) {
             @Override
             protected void onTick() {
+                System.out.println("[DEBUG-GM] Invio Heartbeat. Stato: " + serializeState());
                 if(backupMasterAID == null){
                     backupMasterAID = findBackup();
                 }
@@ -592,17 +609,25 @@ public class GameMasterAgent extends Agent {
     private String serializeState() {
         StringBuilder sb = new StringBuilder();
 
-        // 1. Indice giocatore corrente e turni rimanenti
+        // 1. INDICE GIOCATORE CORRENTE (parts[0])
         sb.append(gameState.getCurrentPlayerIndex()).append(":");
+
+        // 2. TURNI RIMANENTI (parts[1])
         sb.append(gameState.getTurnsToPlay()).append(":");
 
-        // 2. Il Mazzo (tutte le carte in ordine)
-        String deckState = deck.getCards().stream()
-                .map(card -> card.getType().name())
-                .collect(Collectors.joining(","));
-        sb.append(deckState).append(":");
+        // 3. IL MAZZO (parts[2])
+        if (deck != null && deck.getCards() != null && !deck.getCards().isEmpty()) {
+            String deckState = deck.getCards().stream()
+                    .map(card -> card.getType().name())
+                    .collect(Collectors.joining(","));
+            sb.append(deckState);
+        } else {
+            sb.append("WAITING_FOR_PLAYERS");
+        }
+        sb.append(":");
 
-        // 3. Giocatori attivi (AgentName e Nickname)
+        // 4. GIOCATORI ATTIVI (parts[3])
+        // Usiamo il pipe | per separare i giocatori e la virgola , per i dettagli
         String playersState = gameState.getActivePlayers().stream()
                 .map(p -> p.getAgentName() + "," + p.getNickname())
                 .collect(Collectors.joining("|"));

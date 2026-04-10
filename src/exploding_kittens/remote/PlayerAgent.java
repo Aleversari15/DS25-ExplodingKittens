@@ -25,6 +25,7 @@ public class PlayerAgent extends Agent {
     private String nickname;
     private GameView view;
     private int requestedPlayers;
+    private boolean gameStarted = false;
 
     @Override
     protected void setup() {
@@ -157,13 +158,28 @@ public class PlayerAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
+                System.out.println("[DEBUG-PLAYER] " + nickname + " ha ricevuto NEW_MASTER da " + msg.getSender().getLocalName());
+                System.out.println("[DEBUG-PLAYER] gameStarted = " + gameStarted + " (Se false, invio JOIN)");
                 gameMasterAID = msg.getSender();
                 System.out.println("Switch effettuato: nuovo Master è " + gameMasterAID.getLocalName());
                 view.showError("Il Master primario è caduto. Backup attivato!"); //DEBUG
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                // --- LOGICA DI RE-JOIN ---
+                if (!gameStarted) {
+                    System.out.println(nickname + ": Ri-invio richiesta di join al nuovo Master...");
+                    ACLMessage rejoin = new ACLMessage(ACLMessage.REQUEST);
+                    rejoin.addReceiver(gameMasterAID);
+                    rejoin.setContent(Messages.JOIN + ":" + requestedPlayers);
+                    send(rejoin);
+                } else {
+                    // Se la partita era già iniziata, chiediamo solo un refresh della mano
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                }
             } else {
                 block();
             }
+
+
         }
     }
 
@@ -185,6 +201,11 @@ public class PlayerAgent extends Agent {
                 String senderLocal = msg.getSender().getLocalName();
                 AID sender = msg.getSender();
 
+                //!!!!!!!!! NON SONO CONVINTA DI QUESTA SOLUZIONE !!!!!!!!!
+                //TODO: valutare se è meglio gestire il caso del Backup che diventa Master in modo diverso, magari con un comportamento dedicato
+                if(content.equals(Messages.NEW_MASTER)){
+                    gameMasterAID = sender;
+                }
                 if (sender.equals(gameMasterAID)) {
                     dispatchFromGameMaster(content);
                 } else if (sender.getLocalName().equals(handManagerAID.getLocalName())) {
@@ -192,8 +213,6 @@ public class PlayerAgent extends Agent {
                 } else if (sender.getLocalName().equals(kittenDefenseAID.getLocalName())) {
                     dispatchFromKittenDefenseAgent(content);
                 } else {
-                    // Se arriva un messaggio da uno sconosciuto (es. il Backup prima che lo conoscessimo)
-                    // Possiamo gestirlo o loggarlo per debug
                     System.out.println("Messaggio ricevuto da mittente non riconosciuto: " + sender.getLocalName());
                 }
             } else {
@@ -204,6 +223,7 @@ public class PlayerAgent extends Agent {
         private void dispatchFromGameMaster(String content) {
 
             if (content.startsWith(Messages.HAND_INIT)) {
+                gameStarted = true;
                 sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
                 if (queryingForMaster) {
                     queryingForMaster = false;
