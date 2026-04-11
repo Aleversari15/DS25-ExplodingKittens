@@ -308,15 +308,22 @@ public class BackupMasterAgent extends Agent {
         }
 
         private void handleJoinRequest(ACLMessage msg, String content) {
-
             String playerName = msg.getSender().getName();
-            //controlla che non ci siano già giocatori con lo stesso nome
-            Player existing = findPlayerByAgentName(playerName);
+            int requestedLimit = 2; // Default di sicurezza
+            try {
+                if (content.contains(":")) {
+                    String[] parts = content.split(":");
+                    requestedLimit = Integer.parseInt(parts[1].trim());
+                }
+            } catch (Exception e) {
+                System.out.println("Errore nel parsing del limite, uso default: 2");
+            }
 
+            Player existing = findPlayerByAgentName(playerName);
             if (existing == null) {
                 Player newPlayer = new Player(playerName, msg.getSender().getLocalName());
                 gameState.addPlayer(newPlayer);
-                System.out.println("Giocatore ri-annunciato aggiunto: " + playerName);
+                System.out.println("Giocatore registrato: " + playerName + " (Richiede partita da: " + requestedLimit + ")");
             }
 
             ACLMessage reply = msg.createReply();
@@ -324,26 +331,27 @@ public class BackupMasterAgent extends Agent {
             reply.setContent(Messages.JOINED);
             send(reply);
 
-            int limit = 2; // TODO: Valore di default o recuperato
-            if (gameState.getActivePlayers().size() == limit) {
-                System.out.println("Lobby piena dopo il failover! Avvio partita...");
-                deck = DeckBuilder.prepareBaseDeck(limit);
-                Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
-                DeckBuilder.insertExplodingKittens(deck, limit);
-
-                for (Player p : gameState.getActivePlayers()) {
-                    ACLMessage handMsg = new ACLMessage(ACLMessage.INFORM);
-                    handMsg.addReceiver(new AID(p.getAgentName(), true));
-                    handMsg.setContent(Messages.HAND_INIT + hands.get(p.getAgentName()));
-                    send(handMsg);
-                }
-
-                gameState.setCurrentPlayerIndex(0);
-                nextTurn();
+            if (gameState.getActivePlayers().size() >= requestedLimit) {
+                startMatch(requestedLimit);
             }
+        }
 
-            System.out.println("[DEBUG-BACKUP] Ricevuta richiesta JOIN da: " + msg.getSender().getLocalName());
-            System.out.println("[DEBUG-BACKUP] Totale giocatori ora: " + gameState.getActivePlayers().size() + "/" + limit);
+        /*Metodo privato che contiene la logica di avvio del gioco*/
+        private void startMatch(int limit) {
+            System.out.println("Lobby piena (" + limit + ")! Generazione mazzo e distribuzione...");
+
+            deck = DeckBuilder.prepareBaseDeck(limit);
+            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+            DeckBuilder.insertExplodingKittens(deck, limit);
+
+            for (Player p : gameState.getActivePlayers()) {
+                ACLMessage handMsg = new ACLMessage(ACLMessage.INFORM);
+                handMsg.addReceiver(new AID(p.getAgentName(), true));
+                handMsg.setContent(Messages.HAND_INIT + hands.get(p.getAgentName()));
+                send(handMsg);
+            }
+            gameState.setCurrentPlayerIndex(0);
+            nextTurn();
         }
 
         private void handleAttack(ACLMessage msg) {
