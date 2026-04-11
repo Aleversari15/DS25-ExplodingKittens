@@ -398,7 +398,7 @@ public class GameView {
 
                 JOptionPane.showMessageDialog(frame, panel,
                         "Vincitore", JOptionPane.PLAIN_MESSAGE);
-                frame.dispose();
+
             });
 
     }
@@ -524,7 +524,7 @@ public class GameView {
 
             JOptionPane.showMessageDialog(frame, panel,
                     "Eliminato", JOptionPane.PLAIN_MESSAGE);
-            frame.dispose();
+
         });
     }
 
