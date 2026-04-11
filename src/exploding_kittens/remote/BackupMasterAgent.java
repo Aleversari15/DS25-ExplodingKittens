@@ -350,8 +350,21 @@ public class BackupMasterAgent extends Agent {
                 handMsg.setContent(Messages.HAND_INIT + hands.get(p.getAgentName()));
                 send(handMsg);
             }
+            broadcastPlayersList();
             gameState.setCurrentPlayerIndex(0);
             nextTurn();
+        }
+        private void broadcastPlayersList() {
+            String list = gameState.getActivePlayers().stream()
+                    .map(Player::getNickname)
+                    .collect(Collectors.joining(","));
+
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("PLAYERS_LIST:" + list);
+            for (Player p : gameState.getActivePlayers()) {
+                msg.addReceiver(new AID(p.getAgentName(), true));
+            }
+            send(msg);
         }
 
         private void handleAttack(ACLMessage msg) {
