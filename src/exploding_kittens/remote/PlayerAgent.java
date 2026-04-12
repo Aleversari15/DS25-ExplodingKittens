@@ -354,6 +354,9 @@ public class PlayerAgent extends Agent {
                         .filter(n -> !n.isBlank())
                         .toList();
                 view.updatePlayersList(allPlayers);
+            } else if (content.startsWith("PLAYER_DISCONNECTED:")) {
+                String nick = content.substring("PLAYER_DISCONNECTED:".length());
+                view.showPlayerDisconnected(nick);
             }
             else {
                 view.showError(content);

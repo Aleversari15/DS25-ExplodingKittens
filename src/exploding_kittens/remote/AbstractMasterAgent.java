@@ -483,7 +483,7 @@ public abstract class AbstractMasterAgent extends Agent {
             gameState.removePlayer(p);
             clientsAliveRegister.remove(p.getAgentName());
 
-            broadcastToAll(p.getNickname() + " disconnesso.");
+            broadcastToAll("PLAYER_DISCONNECTED:" + p.getNickname());
 
             if (gameState.isGameOver()) {
                 announceWinner();

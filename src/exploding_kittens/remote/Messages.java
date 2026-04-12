@@ -74,6 +74,7 @@ public final class Messages {
     //Gestione failure client
     public static final String HEARTBEAT_CLIENT = "HEARTBEAT_CLIENT";
     public static final String CLIENT_ALIVE     = "CLIENT_ALIVE";
+    public static final String PLAYER_DISCONNECTED = "PLAYER_DISCONNECTED:";
 
 
 }
