@@ -418,6 +418,7 @@ public class PlayerAgent extends Agent {
 
             } else if (content.equals(Messages.SHOW_ELIMINATED)) {
                 view.showYouAreEliminated();
+                view.removePlayerFromList(nickname);
 
             } else if (content.equals(Messages.ASK_DEFUSE_POSITION)) {
                 // Usiamo un Thread per non bloccare l'agente mentre la finestra è aperta

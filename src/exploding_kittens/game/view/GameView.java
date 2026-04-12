@@ -645,15 +645,22 @@ public class GameView {
     public void showPlayerDisconnected(String nickname) {
         SwingUtilities.invokeLater(() -> {
             appendLog("[DISCONNESSIONE] " + nickname + " si è disconnesso.");
-
-            for (int i = 0; i < playersListModel.size(); i++) {
-                String name = playersListModel.get(i).replace(" • ", "");
-                if (name.equals(nickname)) {
-                    playersListModel.remove(i);
-                    break;
-                }
-            }
+            removePlayerFromList(nickname);
         });
+    }
+
+    /**
+     * Meotodo per rimuovere un player dalla lista quando si disconnette o viene eliminato.
+     * @param nickname
+     */
+    public void removePlayerFromList(String nickname){
+        for (int i = 0; i < playersListModel.size(); i++) {
+            String name = playersListModel.get(i).replace(" • ", "");
+            if (name.equals(nickname)) {
+                playersListModel.remove(i);
+                break;
+            }
+        }
     }
 
     private void askCatCardTarget() {
