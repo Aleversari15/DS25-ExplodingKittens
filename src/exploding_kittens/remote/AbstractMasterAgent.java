@@ -22,6 +22,8 @@ public abstract class AbstractMasterAgent extends Agent {
     protected ACLMessage pendingAction    = null;
     protected String     pendingCatTarget = null;
     protected static final String CAT_LOG = "[Master - CAT_CARD] "; //TODO da rimuovere al termine dei test
+    protected Map<String, Long> clientsAliveRegister = new HashMap<>();
+    protected static final long PLAYER_TIMEOUT = 10000;
 
     /**
      * Processa un messaggio di gioco. Restituisce true se il messaggio
@@ -30,6 +32,11 @@ public abstract class AbstractMasterAgent extends Agent {
     protected boolean processGameMessage(ACLMessage msg) {
         if (msg == null || msg.getContent() == null) return false;
         String content = msg.getContent();
+
+        if (content.equals(Messages.HEARTBEAT_CLIENT)) {
+            handlePlayerHeartbeat(msg);
+            return true;
+        }
 
         // HAND_RESPONSE (risposta alla richiesta di validazione mano)
         if (content.startsWith(Messages.HAND_RESPONSE)) {
@@ -330,6 +337,12 @@ public abstract class AbstractMasterAgent extends Agent {
                 .collect(Collectors.joining("|"));
         sb.append(playersState);
 
+        String heartbeatState = clientsAliveRegister.entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining("|"));
+
+        sb.append(":").append(heartbeatState);
+
         return sb.toString();
     }
 
@@ -373,6 +386,16 @@ public abstract class AbstractMasterAgent extends Agent {
                     }
                 }
                 if (!restoredPlayers.isEmpty()) gameState.setActivePlayers(restoredPlayers);
+            }
+
+            if (parts.length >= 5) {
+                clientsAliveRegister.clear();
+                for (String entry : parts[4].split("\\|")) {
+                    String[] kv = entry.split("=");
+                    if (kv.length == 2) {
+                        clientsAliveRegister.put(kv[0], Long.parseLong(kv[1]));
+                    }
+                }
             }
 
         } catch (Exception e) {
@@ -430,5 +453,47 @@ public abstract class AbstractMasterAgent extends Agent {
         reply.setPerformative(ACLMessage.DISCONFIRM);
         reply.setContent(reason);
         send(reply);
+    }
+
+    protected void handlePlayerHeartbeat(ACLMessage msg) {
+        clientsAliveRegister.put(msg.getSender().getName(), System.currentTimeMillis());
+    }
+
+    /**
+     * Metodo per controllare l'attività dei client.
+     * Se non riceviamo heartbeats da un tempo > PLAYER_TIMEOUT allora eliminiamo il player dalla partita.
+     * Se il player che non risulta più attivo è proprio quello di turno, lo eliminiamo e passiamo al turno del prossimo giocatore.
+     */
+    protected void checkDisconnectedPlayers() {
+        long now = System.currentTimeMillis();
+
+        List<Player> toRemove = gameState.getActivePlayers().stream()
+                .filter(p -> {
+                    Long last = clientsAliveRegister.get(p.getAgentName());
+                    return last == null || now - last > PLAYER_TIMEOUT;
+                })
+                .toList();
+
+        for (Player p : toRemove) {
+            System.out.println("[FAULT] Player disconnesso: " + p.getNickname());
+
+            boolean wasCurrent = gameState.getCurrentPlayer() != null &&
+                    gameState.getCurrentPlayer().getAgentName().equals(p.getAgentName());
+
+            gameState.removePlayer(p);
+            clientsAliveRegister.remove(p.getAgentName());
+
+            broadcastToAll(p.getNickname() + " disconnesso.");
+
+            if (gameState.isGameOver()) {
+                announceWinner();
+                return;
+            }
+
+            if (wasCurrent) {
+                gameState.nextTurn();
+                nextTurn();
+            }
+        }
     }
 }

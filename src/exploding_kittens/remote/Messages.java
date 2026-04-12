@@ -70,4 +70,10 @@ public final class Messages {
     public static final String HEARTBEAT = "HEARTBEAT:";
     public static final String NEW_MASTER = "NEW_MASTER"; //broadcast per far aggiornamenti AID del master ai client
     public static final String BACKUP_REGISTER = "BACKUP_REGISTER";
+
+    //Gestione failure client
+    public static final String HEARTBEAT_CLIENT = "HEARTBEAT_CLIENT";
+    public static final String CLIENT_ALIVE     = "CLIENT_ALIVE";
+
+
 }

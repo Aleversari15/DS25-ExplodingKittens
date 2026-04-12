@@ -20,6 +20,7 @@ import java.util.Map;
  * 1) Lobby, attende il join dei giocatori.
  * 2) Distribuzione carte e avvio della partita.
  * 3) Gestione logica di gioco (contenuta in AbstractMasterAgent)
+ * 4) Monitoraggio heartbeat client.
  */
 public class GameMasterAgent extends AbstractMasterAgent {
     private int expectedPlayers = -1;
@@ -140,6 +141,7 @@ public class GameMasterAgent extends AbstractMasterAgent {
             broadcastPlayersList();
             nextTurn();
             addBehaviour(new HandleActionBehaviour());
+            startPlayerTimeoutChecker(); //Lo metto qui e non nel setup altrimenti i player vengono considerati inattivi ancora prima che riescano ad unirsi al gioco
         }
     }
 
@@ -156,6 +158,18 @@ public class GameMasterAgent extends AbstractMasterAgent {
                 block();
             }
         }
+    }
+
+    /**
+     * Behaviour 4
+     */
+    private void startPlayerTimeoutChecker() {
+        addBehaviour(new TickerBehaviour(this, 5000) {
+            @Override
+            protected void onTick() {
+                checkDisconnectedPlayers();
+            }
+        });
     }
 
     /**

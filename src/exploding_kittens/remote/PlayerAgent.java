@@ -5,6 +5,7 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -53,6 +54,7 @@ public class PlayerAgent extends Agent {
         startSubAgents();
         System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
+        addBehaviour(new StartHeartBeatBehaviour(this));
     }
 
     private AID findGameMaster() {
@@ -119,6 +121,23 @@ public class PlayerAgent extends Agent {
             send(msg);
             System.out.println(nickname + " inviata richiesta di join per partita da " + requestedPlayers);
             addBehaviour(new WaitForConfirmBehaviour());
+        }
+    }
+
+    //Behaviour per l'invio degli heartbeat (necessario per gestire failure dei client)
+    private class StartHeartBeatBehaviour extends TickerBehaviour {
+        public StartHeartBeatBehaviour(Agent a) {
+            super(a, 3000);
+        }
+
+        @Override
+        protected void onTick() {
+                if (gameMasterAID != null) {
+                    ACLMessage hb = new ACLMessage(ACLMessage.INFORM);
+                    hb.addReceiver(gameMasterAID);
+                    hb.setContent(Messages.HEARTBEAT_CLIENT);
+                    send(hb);
+                }
         }
     }
 
