@@ -471,7 +471,9 @@ public abstract class AbstractMasterAgent extends Agent {
         List<Player> toRemove = gameState.getActivePlayers().stream()
                 .filter(p -> {
                     Long last = clientsAliveRegister.get(p.getAgentName());
-                    return last == null || now - last > PLAYER_TIMEOUT;
+                    System.out.println("[DEBUG-TIMEOUT] " + p.getNickname() + " last heartbeat: " + (last != null ? (now - last) + "ms ago" : "never"));
+                    if (last == null) return false;
+                    return  now - last > PLAYER_TIMEOUT;
                 })
                 .toList();
 

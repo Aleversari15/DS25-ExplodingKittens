@@ -62,6 +62,17 @@ public class PlayerAgent extends Agent {
 
         System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
+        addBehaviour(new jade.core.behaviours.TickerBehaviour(this, 5000) {
+            @Override
+            protected void onTick() {
+                if (gameMasterAID != null) {
+                    ACLMessage hb = new ACLMessage(ACLMessage.INFORM);
+                    hb.addReceiver(gameMasterAID);
+                    hb.setContent(Messages.HEARTBEAT_CLIENT);
+                    myAgent.send(hb);
+                }
+            }
+        });
     }
     /**
      * Crea e avvia dinamicamente i sotto-agenti HandManager e KittenDefense
