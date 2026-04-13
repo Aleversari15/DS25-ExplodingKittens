@@ -1,16 +1,11 @@
 package exploding_kittens.remote;
 
-import exploding_kittens.game.model.*;
-import jade.core.AID;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
-
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Il BackupMasterAgent rimane in ascolto degli heartbeat dal GameMaster primario.
@@ -33,7 +28,7 @@ public class BackupMasterAgent extends AbstractMasterAgent {
     protected void setup() {
         registerInDF();
         addBehaviour(new MainBehaviour());
-        addBehaviour(new TimeoutWatchdogBehaviour(this, TICKER_PERIOD));
+        addBehaviour(new TimeoutWatchBehaviour(this, TICKER_PERIOD));
     }
 
     /**
@@ -68,8 +63,8 @@ public class BackupMasterAgent extends AbstractMasterAgent {
     /**
      * Behaviour 2
      */
-    private class TimeoutWatchdogBehaviour extends TickerBehaviour {
-        TimeoutWatchdogBehaviour(jade.core.Agent a, long period) { super(a, period); }
+    private class TimeoutWatchBehaviour extends TickerBehaviour {
+        TimeoutWatchBehaviour(jade.core.Agent a, long period) { super(a, period); }
 
         @Override
         protected void onTick() {
@@ -97,6 +92,13 @@ public class BackupMasterAgent extends AbstractMasterAgent {
                 && !gameState.getActivePlayers().isEmpty()) {
             nextTurn();
         }
+
+        addBehaviour(new TickerBehaviour(this, 5000) {
+            @Override
+            protected void onTick() {
+                checkDisconnectedPlayers();
+            }
+        });
     }
 
     //TODO: Ricontrollare

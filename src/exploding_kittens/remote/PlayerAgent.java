@@ -336,7 +336,7 @@ public class PlayerAgent extends Agent {
         private void dispatchFromKittenDefenseAgent(String content) {
             if (content.equals(Messages.SHOW_ELIMINATED)) {
                 view.showYouAreEliminated();
-            } 
+            }
             else if (content.equals(Messages.ASK_DEFUSE_POSITION)) {
                 askDefusePosition();
             }
