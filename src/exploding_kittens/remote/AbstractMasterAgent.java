@@ -278,6 +278,7 @@ public abstract class AbstractMasterAgent extends Agent {
         if (eliminated != null) {
             gameState.removePlayer(eliminated);
             broadcastToAll(eliminated.getNickname() + " e' stato eliminato!");
+            broadcastPlayersList();
             System.out.println(eliminated.getNickname() + " eliminato.");
         }
         if (gameState.isGameOver()) {
@@ -422,7 +423,7 @@ public abstract class AbstractMasterAgent extends Agent {
         String list = gameState.getActivePlayers().stream()
                 .map(Player::getNickname)
                 .collect(Collectors.joining(","));
-        broadcastToAll("PLAYERS_LIST:" + list);
+        broadcastToAll(Messages.PLAYER_LIST + list);
     }
 
     private void sendDisconfirm(ACLMessage originalMsg, String reason) {

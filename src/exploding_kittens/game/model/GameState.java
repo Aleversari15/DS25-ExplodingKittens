@@ -19,7 +19,20 @@ public class GameState {
     }
 
     public void removePlayer(Player player) {
+        int indexToRemove = -1;
+        for (int i = 0; i < activePlayers.size(); i++) {
+            if (activePlayers.get(i).getAgentName().equals(player.getAgentName())) {
+                indexToRemove = i;
+                break;
+            }
+        }
         activePlayers.remove(player);
+        if (indexToRemove < currentPlayerIndex) {
+            currentPlayerIndex--;
+        }
+        if (currentPlayerIndex >= activePlayers.size() && !activePlayers.isEmpty()) {
+            currentPlayerIndex = 0;
+        }
     }
 
     public int getCurrentPlayerIndex() {
