@@ -15,6 +15,9 @@ public final class Messages {
     public static final String TURN_OF           = "TURN:";
     public static final String NOT_YOUR_TURN     = "NOT_YOUR_TURN";
 
+    //Sincroizzazione stato
+    public static final String PLAYER_LIST        = "PLAYER_LIST:";
+
     //Azioni giocatore
     public static final String DRAW              = "DRAW";
     public static final String PLAY              = "PLAY:";
