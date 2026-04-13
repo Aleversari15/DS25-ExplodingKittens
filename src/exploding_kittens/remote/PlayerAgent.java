@@ -17,7 +17,11 @@ import jade.wrapper.AgentController;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
+/**
+ * Rappresenta l'agente principale del giocatore nel sistema multi-agente.
+ * Gestisce l'interfaccia utente (GameView), la registrazione al GameMaster e il coordinamento
+ * con i sotto-agenti specializzati per la gestione della mano e la difesa dagli exploding kittens.
+ */
 public class PlayerAgent extends Agent {
 
     private AID handManagerAID;
@@ -28,6 +32,10 @@ public class PlayerAgent extends Agent {
     private int requestedPlayers;
     private boolean gameStarted = false;
 
+    /**
+     * Inizializza l'agente, registra i servizi nel DF, avvia i sotto-agenti e
+     * inizializza l'interfaccia grafica.
+     */
     @Override
     protected void setup() {
         Object[] args = getArguments();
@@ -55,7 +63,10 @@ public class PlayerAgent extends Agent {
         System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
     }
-
+    /**
+     * Crea e avvia dinamicamente i sotto-agenti HandManager e KittenDefense
+     * all'interno dello stesso container del PlayerAgent.
+     */
     private void startSubAgents() {
         AgentContainer container = getContainerController();
         try {
@@ -72,7 +83,10 @@ public class PlayerAgent extends Agent {
     }
 
     // --- COMPORTAMENTI ---
-
+    /**
+     * Comportamento che cerca il GameMaster nel Directory Facilitator (DF)
+     * e avvia la procedura di registrazione (JOIN).
+     */
     private class RegisterToGameMasterBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
@@ -89,7 +103,9 @@ public class PlayerAgent extends Agent {
             addBehaviour(new WaitForConfirmBehaviour());
         }
     }
-
+    /**
+     * Invia un messaggio di richiesta JOIN al GameMaster specificando il numero di giocatori desiderati.
+     */
     private void sendJoinRequest() {
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
         msg.addReceiver(gameMasterAID);
@@ -97,7 +113,9 @@ public class PlayerAgent extends Agent {
         send(msg);
         System.out.println(nickname + " inviata richiesta JOIN (partita da " + requestedPlayers + ")");
     }
-
+    /**
+     * In attesa di una conferma o di un rifiuto da parte del GameMaster per l'ingresso nella partita.
+     */
     private class WaitForConfirmBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
@@ -109,7 +127,6 @@ public class PlayerAgent extends Agent {
                 if (msg.getPerformative() == ACLMessage.CONFIRM) {
                     System.out.println(nickname + " registrato!");
                     myAgent.removeBehaviour(this);
-                    // AVVIO DEL DISPATCHER UNICO
                     addBehaviour(new MainListenerBehaviour());
                 } else {
                     view.showError("Lobby piena.");
@@ -120,7 +137,10 @@ public class PlayerAgent extends Agent {
         }
     }
 
-
+    /**
+     * Comportamento principale dell'agente. Smista tutti i messaggi in arrivo
+     * ai rispettivi gestori (GameMaster, HandManager o KittenDefense).
+     */
     private class MainListenerBehaviour extends CyclicBehaviour {
         private boolean queryingForMaster = false;
         private boolean handReady = false;
@@ -149,7 +169,10 @@ public class PlayerAgent extends Agent {
                 block();
             }
         }
-
+        /**
+         * Gestisce la caduta del Master primario e l'attivazione del BackupMaster.
+         * @param newMaster L'AID del nuovo agente Master.
+         */
         private void handleFailover(AID newMaster) {
             gameMasterAID = newMaster;
             System.out.println("[FAILOVER] Nuovo Master: " + gameMasterAID.getLocalName());
@@ -161,7 +184,10 @@ public class PlayerAgent extends Agent {
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             }
         }
-
+        /**
+         * Gestisce la logica di gioco proveniente dal GameMaster (turni, pescate, effetti carte).
+         * @param content Il contenuto del messaggio ricevuto.
+         */
         private void dispatchFromGameMaster(String content) {
             if (content.startsWith(Messages.PLAYER_LIST)) {
                 updatePlayersUI(content);
@@ -227,7 +253,10 @@ public class PlayerAgent extends Agent {
             }
 
         }
-
+        /**
+         * Aggiorna la lista laterale dei giocatori nella View.
+         * @param content Stringa contenente la lista dei nomi dei giocatori.
+         */
         private void updatePlayersUI(String content) {
             String[] names = content.substring(Messages.PLAYER_LIST.length()).split(",");
             List<String> cleanNames = Arrays.stream(names)
@@ -236,7 +265,10 @@ public class PlayerAgent extends Agent {
                     .toList();
             view.updatePlayersList(cleanNames);
         }
-
+        /**
+         * Gestisce la distribuzione iniziale della mano e avvia il thread per l'ascolto delle azioni utente.
+         * @param content Stringa contenente i dati della mano iniziale.
+         */
         private void processHandInit(String content) {
             sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
             String handData = content.substring(Messages.HAND_INIT.length());
@@ -250,7 +282,10 @@ public class PlayerAgent extends Agent {
                 myAgent.send(toGM);
             }).start();
         }
-
+        /**
+         * Avvia un thread separato per richiedere all'utente la posizione del mazzo
+         * in cui reinserire l'Exploding Kitten dopo un Defuse.
+         */
         private void askDefusePosition() {
             new Thread(() -> {
                 int position = view.askDefusePosition(0);
@@ -260,7 +295,10 @@ public class PlayerAgent extends Agent {
                 myAgent.send(defuseMsg);
             }).start();
         }
-
+        /**
+         * Gestisce i messaggi provenienti dall'agente HandManager.
+         * @param content Il contenuto del messaggio.
+         */
         private void dispatchFromHandManagerAgent(String content) {
             if (content.equals(Messages.HAND_READY)) {
                 handReady = true;
@@ -291,7 +329,10 @@ public class PlayerAgent extends Agent {
                 }
             }
         }
-
+        /**
+         * Gestisce i messaggi provenienti dall'agente KittenDefense.
+         * @param content Il contenuto del messaggio.
+         */
         private void dispatchFromKittenDefenseAgent(String content) {
             if (content.equals(Messages.SHOW_ELIMINATED)) {
                 view.showYouAreEliminated();
@@ -319,7 +360,10 @@ public class PlayerAgent extends Agent {
     }
 
     // --- UTILS ---
-
+    /**
+     * Ricerca il GameMaster primario all'interno del DF.
+     * @return L'AID del GameMaster se trovato, null altrimenti.
+     */
     private AID findGameMaster() {
         try {
             DFAgentDescription template = new DFAgentDescription();
@@ -332,14 +376,23 @@ public class PlayerAgent extends Agent {
             return null;
         }
     }
-
+    /**
+     * Helper per l'invio rapido di messaggi ai sotto-agenti locali.
+     * @param target L'AID del destinatario.
+     * @param performative La performativa FIPA (es. ACLMessage.INFORM).
+     * @param content Il contenuto testuale.
+     */
     private void sendMsgToSubAgent(AID target, int performative, String content) {
         ACLMessage msg = new ACLMessage(performative);
         msg.addReceiver(target);
         msg.setContent(content);
         send(msg);
     }
-
+    /**
+     * Converte la stringa serializzata della mano in una lista di nomi di carte.
+     * @param serialized Stringa con nomi di carte separati da virgola.
+     * @return Lista di stringhe rappresentanti le carte.
+     */
     private List<String> parseHand(String serialized) {
         if (serialized == null || serialized.isEmpty()) return new ArrayList<>();
         return Arrays.stream(serialized.split(",")).map(String::trim).toList();
