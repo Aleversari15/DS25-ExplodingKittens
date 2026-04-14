@@ -12,30 +12,40 @@ public class Card {
     private final String name;
     private final String description;
 
+    /**
+     * Costruttore base per la creazione di una carta.
+     * @param type tipo della carta
+     * @param name nome della carta
+     * @param description descrizione della carta
+     */
     public Card(CardType type, String name, String description) {
         this.type = type;
         this.name = name;
         this.description = description;
     }
 
+    /**
+     * Altro costrutture per la creazione di una carta, che richiede solo in parametro.
+     * @param type tipo della carta.
+     */
     public Card(CardType type) {
         this.type = type;
         this.name = type.name();
         this.description = "Carta di tipo " + type.name();
     }
 
+    /**
+     * Restituisce il tipo della carta.
+     * @return il tipo
+     */
     public CardType getType() {
         return type;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
+    /**
+     * Restituisce il nome della carta.
+     * @return il nome
+     */
     @Override
     public String toString() {
         return name;
