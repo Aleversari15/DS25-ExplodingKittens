@@ -43,7 +43,6 @@ public class DeckBuilder {
     public static Deck prepareBaseDeck(int numPlayers) {
         List<Card> cards = createStandardDeck(numPlayers);
         Collections.shuffle(cards);
-
         Deck deck = new Deck();
         deck.setCards(cards);
         return deck;
@@ -76,7 +75,6 @@ public class DeckBuilder {
      */
     public static Map<String, String> buildPlayerHands(Deck deck, List<Player> players) {
         Map<String, String> hands = new LinkedHashMap<>();
-
         for (Player player : players) {
             List<Card> hand = new ArrayList<>();
             Card defuse = deck.removeCardOfType(CardType.DEFUSE);
