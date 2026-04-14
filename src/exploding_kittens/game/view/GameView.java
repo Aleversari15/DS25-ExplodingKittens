@@ -16,10 +16,10 @@ import javax.imageio.ImageIO;
 /**
  * GUI Swing per singolo giocatore.
  * Le carte mostrano le immagini caricate da resources/.
- * Mostra che carte che il giocatore ha in mano e in formato testuale mostra tutte le azioni e i cambi di turno della partita.
+ * Mostra le carte che il giocatore ha in mano e in 
+ * formato testuale mostra tutte le azioni e i cambi di turno della partita.
  */
 public class GameView {
-
     private static final Color BG_DARK       = new Color(18, 18, 28);
     private static final Color BG_PANEL      = new Color(28, 28, 42);
     private static final Color BG_CARD       = new Color(38, 38, 58);
@@ -31,16 +31,12 @@ public class GameView {
     private static final Color TEXT_PRIMARY  = new Color(240, 235, 220);
     private static final Color TEXT_MUTED    = new Color(140, 135, 120);
     private static final Color BORDER_COLOR  = new Color(60, 58, 80);
-
-
     private static final Font FONT_TITLE  = new Font("Georgia", Font.BOLD, 22);
     private static final Font FONT_LOG    = new Font("Monospaced", Font.PLAIN, 12);
     private static final Font FONT_BUTTON = new Font("Georgia", Font.BOLD, 12);
     private static final Font FONT_LABEL  = new Font("Georgia", Font.PLAIN, 13);
     private static final Font FONT_CARD_SM = new Font("Georgia", Font.BOLD, 9);
-
     private final Map<String, Image> cardImages = new HashMap<>();
-
     private JFrame    frame;
     private JPanel    handPanel;
     private JTextArea logArea;
@@ -50,7 +46,6 @@ public class GameView {
     private JPanel    playersPanel;
     private DefaultListModel<String> playersListModel;
     private JList<String> playersList;
-
     private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
 
     public GameView() {
@@ -59,17 +54,7 @@ public class GameView {
     }
 
     private void loadCardImages() {
-        // Mappa CardType -> nome file img
-        Map<String, String> fileNames = new HashMap<>();
-        fileNames.put("EXPLODING_KITTEN",  "ExplodingKitten.jpg");
-        fileNames.put("DEFUSE",            "Defuse.jpg");
-        fileNames.put("SKIP",              "Skip.jpg");
-        fileNames.put("ATTACK",            "Attack.jpg");
-        fileNames.put("SHUFFLE",           "Shuffle.jpg");
-        fileNames.put("SEE_THE_FUTURE",    "SeetheFuture.jpg");
-        fileNames.put("CAT_CARD",          "CartaGatto.jpg");
-        fileNames.put("WINNER",            "winner.png") ;
-
+        Map<String, String> fileNames = getStringImageNameMap();
         for (Map.Entry<String, String> entry : fileNames.entrySet()) {
             try {
                 File file = new File("src/exploding_kittens/resources/" + entry.getValue());
@@ -83,6 +68,19 @@ public class GameView {
                 System.err.println("[GameView] Errore caricamento immagine: " + entry.getValue());
             }
         }
+    }
+
+    private static Map<String, String> getStringImageNameMap() {
+        Map<String, String> fileNames = new HashMap<>();
+        fileNames.put("EXPLODING_KITTEN",  "ExplodingKitten.jpg");
+        fileNames.put("DEFUSE",            "Defuse.jpg");
+        fileNames.put("SKIP",              "Skip.jpg");
+        fileNames.put("ATTACK",            "Attack.jpg");
+        fileNames.put("SHUFFLE",           "Shuffle.jpg");
+        fileNames.put("SEE_THE_FUTURE",    "SeetheFuture.jpg");
+        fileNames.put("CAT_CARD",          "CartaGatto.jpg");
+        fileNames.put("WINNER",            "winner.png") ;
+        return fileNames;
     }
 
     private void buildUI() {
@@ -106,6 +104,7 @@ public class GameView {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+
     private JPanel buildPlayersSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 10));
         sidebar.setBackground(BG_DARK);
@@ -123,7 +122,6 @@ public class GameView {
         playersList.setFont(FONT_LABEL);
         playersList.setFixedCellHeight(30);
         playersList.setBorder(new EmptyBorder(5, 5, 5, 5));
-
         playersList.setSelectionModel(new DefaultListSelectionModel() {
             @Override public void setSelectionInterval(int index0, int index1) { super.setSelectionInterval(-1, -1); }
         });
@@ -170,7 +168,7 @@ public class GameView {
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(12, 16, 0, 16));
 
-        JLabel logTitle = new JLabel("-- REGISTRO DI GIOCO --");
+        JLabel logTitle = new JLabel("REGISTRO DI GIOCO: ");
         logTitle.setFont(new Font("Georgia", Font.BOLD, 11));
         logTitle.setForeground(TEXT_MUTED);
 
@@ -210,8 +208,6 @@ public class GameView {
         handScroll.setBorder(null);
         handScroll.getViewport().setBackground(BG_DARK);
         handScroll.setPreferredSize(new Dimension(0, 185));
-
-        // Velocità di scorrimento
         handScroll.getHorizontalScrollBar().setUnitIncrement(16);
 
         JPanel handWrapper = new JPanel(new BorderLayout());
@@ -224,7 +220,7 @@ public class GameView {
         actionPanel.setBackground(BG_DARK);
 
         //TODO: disabilitare bottone quando non è il turno del giocatore (sembra essere disabilitato solo all'inizio)
-        JButton drawBtn    = buildButton("PESCA",          ACCENT_GREEN);
+        JButton drawBtn    = buildButton();
         drawBtn.addActionListener(e    -> inputQueue.offer("DRAW"));
         actionPanel.add(drawBtn);
 
@@ -235,18 +231,17 @@ public class GameView {
         return panel;
     }
 
-
-    private JButton buildButton(String text, Color accent) {
-        JButton btn = new JButton(text) {
+    private JButton buildButton() {
+        JButton btn = new JButton("PESCA") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color bg = getModel().isPressed()  ? accent.darker().darker() :
-                        getModel().isRollover() ? accent.darker() : BG_CARD;
+                Color bg = getModel().isPressed()  ? GameView.ACCENT_GREEN.darker().darker() :
+                        getModel().isRollover() ? GameView.ACCENT_GREEN.darker() : BG_CARD;
                 g2.setColor(bg);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                g2.setColor(isEnabled() ? accent : TEXT_MUTED);
+                g2.setColor(isEnabled() ? GameView.ACCENT_GREEN : TEXT_MUTED);
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 10, 10));
                 g2.dispose();
@@ -254,7 +249,7 @@ public class GameView {
             }
         };
         btn.setFont(FONT_BUTTON);
-        btn.setForeground(accent);
+        btn.setForeground(GameView.ACCENT_GREEN);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
@@ -263,7 +258,6 @@ public class GameView {
         btn.setOpaque(false);
         return btn;
     }
-
 
     private JPanel buildCardPanel(String cardType) {
         Color accent = cardAccent(cardType);
@@ -292,7 +286,7 @@ public class GameView {
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // LOGICA CLICK
+        // Logica click su immagine carte
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mousePressed(java.awt.event.MouseEvent e) {
@@ -329,6 +323,10 @@ public class GameView {
         }
     }
 
+    /**
+     * Aggiorna la lista dei giocatori attivi nella barra laterale.
+     * @param playerNames nicknames dei giocatori attivi.
+     */
     public void updatePlayersList(List<String> playerNames) {
         SwingUtilities.invokeLater(() -> {
             if (playersListModel != null) {
@@ -340,6 +338,10 @@ public class GameView {
         });
     }
 
+    /**
+     * Stampa stringa di benvenuti al giocatore con il nickname passato in input.
+     * @param nickname del giocatore appena unito alla partita.
+     */
     public void showWelcome(String nickname) {
         SwingUtilities.invokeLater(() -> {
             nicknameLabel.setText("Giocatore: " + nickname);
@@ -347,6 +349,9 @@ public class GameView {
         });
     }
 
+    /**
+     * Informa il giocatore che il sistema è in attesa in altri giocatori per poter iniziare la partita.
+     */
     public void showWaitingForPlayers() {
         SwingUtilities.invokeLater(() -> {
             turnLabel.setText("In attesa dei giocatori...");
@@ -355,11 +360,11 @@ public class GameView {
         });
     }
 
-    public void showGameStarted() {
-        SwingUtilities.invokeLater(() ->
-                appendLog("\n====== LA PARTITA E' INIZIATA! ======\n"));
-    }
 
+    /**
+     * Mostra popup di fine partita contenente il nome del vincitore.
+     * @param winnerNickname vincitore della partita.
+     */
     public void showGameOver(String winnerNickname) {
             SwingUtilities.invokeLater(() -> {
                 appendLog("\n[FINE] Vince: " + winnerNickname + "!");
@@ -403,44 +408,55 @@ public class GameView {
 
     }
 
+    /**
+     * Aggiorna la label in alto a destra che indica quando è il nostro turno.
+     */
     public void showYourTurn() {
         SwingUtilities.invokeLater(() -> {
-            turnLabel.setText(">>> E' il tuo turno! <<<");
+            turnLabel.setText("E' il tuo turno!");
             turnLabel.setForeground(ACCENT_GREEN);
-            appendLog("\n[TURNO] E' il tuo turno!");
+            appendLog("\n E' il tuo turno!");
         });
     }
 
+    /**
+     * Aggiorna la label in alto a destra che indica il giocatore di turno.
+     */
     public void showOtherPlayerTurn(String nickname) {
         SwingUtilities.invokeLater(() -> {
             turnLabel.setText("Turno di: " + nickname);
             turnLabel.setForeground(ACCENT_BLUE);
-            appendLog("[TURNO] Sta giocando: " + nickname);
+            appendLog(" Sta giocando: " + nickname);
             setActionsEnabled(false);
         });
     }
 
+    /**
+     * Mostra la mano del giocatore.
+     * @param cardNames nomi delle carte in mano al gicatore.
+     */
     public void showHand(List<String> cardNames) {
         SwingUtilities.invokeLater(() -> {
             handPanel.removeAll();
-
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridy = 0;
-            gbc.insets = new Insets(0, 4, 0, 4); // Spaziatura tra le carte
+            gbc.insets = new Insets(0, 4, 0, 4);
             gbc.anchor = GridBagConstraints.CENTER;
-
             for (String card : cardNames) {
                 if (!card.isBlank()) {
                     handPanel.add(buildCardPanel(card.trim()), gbc);
                 }
             }
-
             handPanel.revalidate();
             handPanel.repaint();
             setActionsEnabled(true);
         });
     }
 
+    /**
+     * Stampa la carta appena pescata.
+     * @param cardType tipo della pescata.
+     */
     public void showCardDrawn(String cardType) {
         SwingUtilities.invokeLater(() -> {
             appendLog("[Pesca] Hai pescato: " + cardName(cardType));
@@ -448,16 +464,29 @@ public class GameView {
         });
     }
 
+    /**
+     * Mostra la carta giocata.
+     * @param nickname del giocatore che ha giocato la carta.
+     * @param cardType tipo della carta giocata.
+     */
     public void showCardPlayed(String nickname, String cardType) {
         SwingUtilities.invokeLater(() ->
                 appendLog("[Giocata] " + nickname + " ha giocato: " + cardName(cardType)));
     }
 
+    /**
+     * Informa il giocatore che gli è stata rubata una carta.
+     * @param cardType tipo della carta rubata.
+     */
     public void showStolenCard(String cardType) {
         SwingUtilities.invokeLater(() ->
                 appendLog("[Furto] Ti e' stata rubata: " + cardName(cardType)));
     }
 
+    /**
+     * Mostra le prime tre carte in cima al mazzo quando viene utilizzata una carta See the future.
+     * @param top3 lista delle 3 carte in cima al mazzo.
+     */
     public void showSeeTheFuture(List<String> top3) {
         SwingUtilities.invokeLater(() -> {
             appendLog("[See the Future] Prossime 3 carte del mazzo:");
@@ -468,27 +497,32 @@ public class GameView {
         });
     }
 
+    /**
+     * Informa il giocatore che ha pescato un exploding kitten.
+     */
     public void showExplosion() {
         SwingUtilities.invokeLater(() -> {
-            appendLog("\n[!!!] HAI PESCATO UN EXPLODING KITTEN! [!!!]\n");
+            appendLog("\n HAI PESCATO UN EXPLODING KITTEN!!! \n");
             turnLabel.setText("!!! EXPLODING KITTEN !!!");
             turnLabel.setForeground(ACCENT_RED);
         });
     }
 
+    /**
+     * Informa il giocatore che è stato utilizzato automaticamento il Defuse che aveva in mano.
+     */
     public void showDefuseUsed() {
         SwingUtilities.invokeLater(() ->
                 appendLog("[Defuse] Hai usato il Defuse. Sei salvo!"));
     }
 
-    public void showEliminated(String nickname) {
-        SwingUtilities.invokeLater(() ->
-                appendLog("[Eliminato] " + nickname + " e' stato eliminato!"));
-    }
 
+    /**
+     * Mostra popup di eliminazione dopo che è stato pescato un Exploding Kitten e il giocatore non aveva carte Defuse.
+     */
     public void showYouAreEliminated() {
         SwingUtilities.invokeLater(() -> {
-            appendLog("\n[ELIMINATO] Sei stato eliminato! Nessun Defuse disponibile.\n");
+            appendLog("\n Sei stato eliminato! Nessun Defuse disponibile.\n");
             turnLabel.setText("Sei eliminato");
             turnLabel.setForeground(ACCENT_RED);
             setActionsEnabled(false);
@@ -528,20 +562,31 @@ public class GameView {
         });
     }
 
+    /**
+     * Mostra un messaggio di errore.
+     * @param message
+     */
     public void showError(String message) {
         SwingUtilities.invokeLater(() -> appendLog("[Errore] " + message));
     }
 
+    /**
+     * Avvisa il giocatore quando non è il suo turno e sta tentando di giocare comunque.
+     */
     public void showNotYourTurn() {
-        SwingUtilities.invokeLater(() -> appendLog("[Errore] Non e' il tuo turno!"));
+        SwingUtilities.invokeLater(() -> appendLog("Errore: Non e' il tuo turno!"));
     }
 
+    //TODO Rimuovere, non dovrebbe più servire dopo refactor view
     public void showCardNotInHand() {
-        SwingUtilities.invokeLater(() -> appendLog("[Errore] Non hai quella carta in mano."));
+        SwingUtilities.invokeLater(() -> appendLog("Errore: Non hai quella carta in mano."));
     }
 
+    /**
+     * Avvisa il giocatore che il mazzo è stato mischiato.
+     */
     public void showShuffled() {
-        SwingUtilities.invokeLater(() -> appendLog("[Shuffle] Il mazzo e' stato mischiato."));
+        SwingUtilities.invokeLater(() -> appendLog("Shuffle: Il mazzo e' stato mischiato."));
     }
 
     public String askAction() {
@@ -554,6 +599,12 @@ public class GameView {
         }
     }
 
+    /**
+     * Mostra popup quando viene pescato un Exploding kitten e il giocatore possiede un Defuse.
+     * @param deckSize dimensione del mazzo.
+     * @return la posizione in cui inserire l'exploding kitten.
+     */
+    //TODO controllare perchè non viene utilizzato input
     public int askDefusePosition(int deckSize) {
         inputQueue.clear();
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -599,7 +650,6 @@ public class GameView {
         rightPanel.add(inputField, BorderLayout.CENTER);
         panel.add(rightPanel, BorderLayout.CENTER);
 
-        // Mostra il dialog dall'EDT e mette il risultato nella queue
         SwingUtilities.invokeLater(() -> {
             UIManager.put("OptionPane.background", BG_PANEL);
             UIManager.put("Panel.background", BG_PANEL);
@@ -610,7 +660,6 @@ public class GameView {
                     JOptionPane.OK_CANCEL_OPTION,
                     JOptionPane.PLAIN_MESSAGE
             );
-
             String pos = (result == JOptionPane.OK_OPTION) ? inputField.getText().trim() : "0";
             inputQueue.offer("DEFUSE:" + pos);
         });
@@ -623,25 +672,13 @@ public class GameView {
         }
     }
 
-    public String askNickname() {
-        String[] result = { "Giocatore" };
-        try {
-            SwingUtilities.invokeAndWait(() -> {
-                String input = JOptionPane.showInputDialog(null,
-                        "Inserisci il tuo nickname:",
-                        "Exploding Kittens", JOptionPane.QUESTION_MESSAGE);
-                result[0] = (input != null && !input.isBlank()) ? input.trim() : "Giocatore";
-            });
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-        }
-        return result[0];
-    }
+
 
     /**
      * Metodo per mostrare nel log che un player si è disconnesso e rimozione dalla lista dei players.
      * @param nickname del player disconnesso.
      */
+    //TODO verificare perchè non è utilizzato, potremmo aver perso qualcosa durante il merge
     public void showPlayerDisconnected(String nickname) {
         SwingUtilities.invokeLater(() -> {
             appendLog("[DISCONNESSIONE] " + nickname + " si è disconnesso.");
@@ -663,19 +700,16 @@ public class GameView {
         }
     }
 
+    //TODO Mostrare solo nomi avversari
     private void askCatCardTarget() {
         java.util.List<String> validPlayers = new java.util.ArrayList<>();
         String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
 
+
         for (int i = 0; i < playersListModel.size(); i++) {
             String playerName = playersListModel.getElementAt(i);
-            if (playerName.startsWith(" • ")) {
-                playerName = playerName.substring(3);
-            }
-
-            if (!playerName.equals("Player_"+myName)) {
-                validPlayers.add(playerName);
-            }
+            if (playerName.startsWith(" • ")) {playerName = playerName.substring(3);}
+            if (!playerName.equals("Player_"+myName)) { validPlayers.add(playerName);}
         }
 
         if (validPlayers.isEmpty()) {

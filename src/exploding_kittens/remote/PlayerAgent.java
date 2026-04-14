@@ -195,6 +195,8 @@ public class PlayerAgent extends Agent {
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             }
         }
+
+        //TODO Controllare, mi sa che ci siamo perse degli if con il refactor
         /**
          * Gestisce la logica di gioco proveniente dal GameMaster (turni, pescate, effetti carte).
          * @param content Il contenuto del messaggio ricevuto.
@@ -242,7 +244,7 @@ public class PlayerAgent extends Agent {
                 view.showCardPlayed(nickname, String.valueOf(CardType.ATTACK));
             } else if (content.equals(Messages.SHUFFLE_OK)) {
                 view.showShuffled();
-            } else if (content.equals(Messages.CARD_NOT_IN_HAND)) {
+            } else if (content.equals(Messages.CARD_NOT_IN_HAND)) { //TODO Non dovrebbe più servire dopo refactor view
                 view.showCardNotInHand();
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             } else if (content.equals(Messages.NOT_YOUR_TURN)) {
@@ -253,7 +255,6 @@ public class PlayerAgent extends Agent {
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
             } else if (content.startsWith(Messages.WINNER)) {
                 view.showGameOver(content.substring(Messages.WINNER.length()));
-
             } else if (content.equals(Messages.REQUEST_HAND)) {
                 queryingForMaster = true;
                 sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);

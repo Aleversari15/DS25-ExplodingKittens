@@ -4,14 +4,14 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
+/**
+ * View utilizzata per far unire i giocatori alla partita.
+ */
 public class SetupView {
-
-    // Costanti colore coerenti con GameView
     private static final Color BG_DARK       = new Color(18, 18, 28);
     private static final Color BG_PANEL      = new Color(28, 28, 42);
     private static final Color ACCENT_ORANGE = new Color(255, 120, 40);
     private static final Color TEXT_PRIMARY  = new Color(240, 235, 220);
-
     private JFrame frame;
     private JTextField nameField;
     private JSpinner playerSpinner;
@@ -35,37 +35,35 @@ public class SetupView {
         gbc.insets = new Insets(10, 0, 10, 0);
         gbc.gridx = 0;
 
-        // --- TITOLO ---
+        //Titolo
         JLabel titleLabel = new JLabel("EXPLODING KITTENS", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Georgia", Font.BOLD, 28));
         titleLabel.setForeground(ACCENT_ORANGE);
         gbc.gridy = 0;
         mainPanel.add(titleLabel, gbc);
 
-        // --- CAMPO NOME ---
+        //Campo per inserire il nickname
         JLabel nameLabel = new JLabel("IL TUO NICKNAME:");
         nameLabel.setForeground(TEXT_PRIMARY);
         gbc.gridy = 1;
         mainPanel.add(nameLabel, gbc);
-
         nameField = new JTextField("Giocatore 1");
         styleTextField(nameField);
         gbc.gridy = 2;
         mainPanel.add(nameField, gbc);
 
-        // --- SELETTORE GIOCATORI ---
-        JLabel countLabel = new JLabel("NUMERO GIOCATORI (2-5):");
+        //Scelta numero giocatori
+        JLabel countLabel = new JLabel("NUMERO GIOCATORI (2-4):");
         countLabel.setForeground(TEXT_PRIMARY);
         gbc.gridy = 3;
         mainPanel.add(countLabel, gbc);
-
-        SpinnerModel model = new SpinnerNumberModel(2, 2, 5, 1);
+        SpinnerModel model = new SpinnerNumberModel(2, 2, 4, 1);
         playerSpinner = new JSpinner(model);
         styleSpinner(playerSpinner);
         gbc.gridy = 4;
         mainPanel.add(playerSpinner, gbc);
 
-        // --- BOTTONE START ---
+        // Bottone per entrare in partita
         startButton = new JButton("ENTRA IN PARTITA");
         styleButton(startButton);
         gbc.gridy = 5;
@@ -101,7 +99,6 @@ public class SetupView {
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
-    // --- METODI PER IL CONTROLLER ---
     public String getPlayerName() { return nameField.getText().trim(); }
     public int getPlayerCount() { return (int) playerSpinner.getValue(); }
     public void addStartListener(java.awt.event.ActionListener al) { startButton.addActionListener(al); }
