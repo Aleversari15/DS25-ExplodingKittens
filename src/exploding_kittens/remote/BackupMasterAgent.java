@@ -1,5 +1,6 @@
 package exploding_kittens.remote;
 
+import exploding_kittens.game.model.Player;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
@@ -89,7 +90,7 @@ public class BackupMasterAgent extends AbstractMasterAgent {
         broadcastNewMaster();
 
         if (gameState != null && !gameState.isGameOver()
-                && !gameState.getActivePlayers().isEmpty()) {
+                && !gameState.getActivePlayers().isEmpty() &&gameStarted) {
             nextTurn();
         }
 
@@ -108,18 +109,54 @@ public class BackupMasterAgent extends AbstractMasterAgent {
      */
     private void handleJoinAfterPromotion(ACLMessage msg, String content) {
         String playerName = msg.getSender().getName();
-        if (findPlayerByAgentName(playerName) != null) {
-            // Giocatore già noto
+        if (this.expectedPlayers <= 0) {
+            try {
+                String[] parts = content.split(":");
+                if (parts.length > 1) {
+                    this.expectedPlayers = Integer.parseInt(parts[1]);
+                    System.out.println("[Backup] Impostato expectedPlayers a " + expectedPlayers + " dal messaggio JOIN");
+                }
+            } catch (Exception e) {
+                this.expectedPlayers = 2;
+            }
+        }
+        // -------------------------
+
+        Player existing = findPlayerByAgentName(playerName);
+
+        if (existing != null) {
+            // Giocatore già noto (Riconnessione)
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
             reply.setContent(Messages.JOINED);
             send(reply);
-            nextTurn();
+
+            if (gameStarted) nextTurn();
+            return;
+        }
+
+        // Nuovo giocatore
+        if (!gameStarted && gameState.getActivePlayers().size() < expectedPlayers) {
+            Player newPlayer = new Player(playerName, msg.getSender().getLocalName());
+            gameState.addPlayer(newPlayer);
+
+            System.out.println("Registrato post-failover: " + playerName
+                    + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
+
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.CONFIRM);
+            reply.setContent(Messages.JOINED);
+            send(reply);
+
+            // Se con questo nuovo arrivo la lobby è piena, facciamo partire il gioco
+            if (gameState.getActivePlayers().size() == expectedPlayers) {
+                System.out.println("Lobby completata post-failover. Inizializzo partita...");
+                setupAndStartGame();
+            }
         } else {
-            // Giocatore sconosciuto
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.REFUSE);
-            reply.setContent("GAME_IN_PROGRESS");
+            reply.setContent(gameStarted ? "GAME_IN_PROGRESS" : "LOBBY_FULL");
             send(reply);
         }
     }

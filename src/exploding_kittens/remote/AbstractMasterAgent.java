@@ -24,6 +24,8 @@ public abstract class AbstractMasterAgent extends Agent {
     protected static final String CAT_LOG = "[Master - CAT_CARD] "; //TODO da rimuovere al termine dei test
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
     protected static final long PLAYER_TIMEOUT = 10000;
+    protected boolean gameStarted = false;
+    protected int expectedPlayers = -1;
 
     /**
      * Processa un messaggio di gioco. Restituisce true se il messaggio
@@ -36,6 +38,10 @@ public abstract class AbstractMasterAgent extends Agent {
         if (content.equals(Messages.HEARTBEAT_CLIENT)) {
             handlePlayerHeartbeat(msg);
             return true;
+        }
+
+        if (content.equals(Messages.HAND_INIT)){
+            gameStarted= true;
         }
 
         // HAND_RESPONSE (risposta alla richiesta di validazione mano)
@@ -51,6 +57,7 @@ public abstract class AbstractMasterAgent extends Agent {
             }
             return true;
         }
+
 
         // PLAYER_ELIMINATED (gestito indipendentemente dal turno)
         if (content.equals(Messages.PLAYER_ELIMINATED)) {
@@ -89,6 +96,27 @@ public abstract class AbstractMasterAgent extends Agent {
         return true;
     }
 
+    protected void setupAndStartGame() {
+        if (gameStarted) return;
+
+        this.gameStarted = true;
+        if (deck == null || deck.size() == 0) {
+            deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
+            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+            DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
+
+            for (Player player : gameState.getActivePlayers()) {
+                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                msg.addReceiver(new AID(player.getAgentName(), true));
+                msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
+                send(msg);
+            }
+        }
+
+        System.out.println("Partita avviata da " + getLocalName());
+        broadcastPlayersList();
+        nextTurn();
+    }
 
     private void processActionWithHand(ACLMessage originalMsg, String serializedHand) {
         String content = originalMsg.getContent();
@@ -288,10 +316,12 @@ public abstract class AbstractMasterAgent extends Agent {
             broadcastPlayersList();
             System.out.println(eliminated.getNickname() + " eliminato.");
         }
-        if (gameState.isGameOver()) {
-            announceWinner();
-        } else {
-            nextTurn();
+        if(gameStarted) {
+            if (gameState.isGameOver()) {
+                announceWinner();
+            } else {
+                nextTurn();
+            }
         }
     }
 
@@ -302,7 +332,7 @@ public abstract class AbstractMasterAgent extends Agent {
      * Chiamato dopo ogni azione che termina il turno.
      */
     protected void nextTurn() {
-        if (gameState.isGameOver()) {
+        if (gameState.isGameOver() && gameStarted) {
             announceWinner();
             return;
         }
@@ -327,6 +357,9 @@ public abstract class AbstractMasterAgent extends Agent {
         StringBuilder sb = new StringBuilder();
         sb.append(gameState.getCurrentPlayerIndex()).append(":");
         sb.append(gameState.getTurnsToPlay()).append(":");
+        sb.append(gameStarted).append(":");
+        sb.append(expectedPlayers).append(":");
+
 
         String deckState = (deck != null && !deck.getCards().isEmpty())
                 ? deck.getCards().stream().map(c -> c.getType().name()).collect(Collectors.joining(","))
@@ -353,8 +386,8 @@ public abstract class AbstractMasterAgent extends Agent {
      */
     protected void reconstructState(String data) {
         try {
-            String[] parts = data.split(":", 4);
-            if (parts.length < 4) return;
+            String[] parts = data.split(":", -1);
+            if (parts.length < 6) return;
 
             if (gameState == null) gameState = new GameState();
             if (deck == null)      deck      = new Deck();
@@ -365,9 +398,15 @@ public abstract class AbstractMasterAgent extends Agent {
             try { gameState.setTurnsToPlay(Integer.parseInt(parts[1])); }
             catch (NumberFormatException e) { gameState.setTurnsToPlay(1); }
 
+            try{this.gameStarted = Boolean.parseBoolean(parts[2]);}
+            catch (Exception e){ this.gameStarted = false;}
+
+            try { this.expectedPlayers = Integer.parseInt(parts[3]); }
+            catch (NumberFormatException e) { this.expectedPlayers = -1; }
+
             List<Card> restoredCards = new ArrayList<>();
-            if (!parts[2].isEmpty() && !parts[2].contains("WAITING")) {
-                for (String cardName : parts[2].split(",")) {
+            if (!parts[4].isEmpty() && !parts[4].contains("WAITING")) {
+                for (String cardName : parts[4].split(",")) {
                     String name = cardName.trim();
                     if (!name.isEmpty()) {
                         try { restoredCards.add(new Card(CardType.valueOf(name))); }
@@ -377,9 +416,9 @@ public abstract class AbstractMasterAgent extends Agent {
             }
             deck.setCards(restoredCards);
 
-            if (!parts[3].isEmpty() && !parts[3].equals("null")) {
+            if (!parts[4].isEmpty() && !parts[5].equals("null")) {
                 List<Player> restoredPlayers = new ArrayList<>();
-                for (String pData : parts[3].split("\\|")) {
+                for (String pData : parts[5].split("\\|")) {
                     String[] pParts = pData.split(",");
                     if (pParts.length >= 2) {
                         String nick = pParts[1].replace("Player_", "");
@@ -389,9 +428,9 @@ public abstract class AbstractMasterAgent extends Agent {
                 if (!restoredPlayers.isEmpty()) gameState.setActivePlayers(restoredPlayers);
             }
 
-            if (parts.length >= 5) {
+            if (parts.length >= 6) {
                 clientsAliveRegister.clear();
-                for (String entry : parts[4].split("\\|")) {
+                for (String entry : parts[6].split("\\|")) {
                     String[] kv = entry.split("=");
                     if (kv.length == 2) {
                         clientsAliveRegister.put(kv[0], Long.parseLong(kv[1]));
@@ -488,12 +527,12 @@ public abstract class AbstractMasterAgent extends Agent {
 
             broadcastToAll("PLAYER_DISCONNECTED:" + p.getNickname());
 
-            if (gameState.isGameOver()) {
+            if (gameState.isGameOver() && gameStarted) {
                 announceWinner();
                 return;
             }
 
-            if (wasCurrent) {
+            if (wasCurrent && gameStarted) {
                 gameState.nextTurn();
                 nextTurn();
             }
