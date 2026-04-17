@@ -709,7 +709,7 @@ public class GameView {
         for (int i = 0; i < playersListModel.size(); i++) {
             String playerName = playersListModel.getElementAt(i);
             if (playerName.startsWith(" • ")) {playerName = playerName.substring(3);}
-            if (!playerName.equals("Player_"+myName)) { validPlayers.add(playerName);}
+            if (!playerName.equals(myName)) { validPlayers.add(playerName);}
         }
 
         if (validPlayers.isEmpty()) {
