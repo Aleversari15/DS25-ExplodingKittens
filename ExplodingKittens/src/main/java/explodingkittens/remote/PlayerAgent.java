@@ -202,69 +202,98 @@ public class PlayerAgent extends Agent {
          * @param content Il contenuto del messaggio ricevuto.
          */
         private void dispatchFromGameMaster(String content) {
-            if (content.startsWith(Messages.PLAYER_LIST)) {
-                updatePlayersUI(content);
-            } else if (content.startsWith(Messages.HAND_INIT)) {
-                gameStarted = true;
-                processHandInit(content);
-            } else if (content.startsWith(Messages.YOUR_TURN)) {
-                view.showYourTurn();
-                if (handReady) sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-                else yourTurnPending = true;
-            } else if (content.startsWith(Messages.TURN_OF)) {
-                String otherPlayer = content.substring(Messages.TURN_OF.length());
-                yourTurnPending = false;
-                view.showOtherPlayerTurn(otherPlayer);
-            } else if (content.startsWith(Messages.DREW_KITTEN)) {
-                view.showExplosion();
-                sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, Messages.KITTEN_DRAWN);
-            } else if (content.startsWith(Messages.DREW)) {
-                String cardType = content.substring(Messages.DREW.length());
-                view.showCardDrawn(cardType);
-            } else if (content.startsWith(Messages.ADD_CARD) || content.startsWith(Messages.REMOVE_CARD)) {
-                sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
-            } else if (content.startsWith(Messages.REFRESH_HAND)) {
-                queryingForMaster = false;
-                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            } else if (content.startsWith(Messages.SEE_THE_FUTURE)) {
-                String[] cards = content.substring(Messages.SEE_THE_FUTURE.length()).split(",");
-                view.showSeeTheFuture(Arrays.asList(cards));
-            } else if (content.startsWith(Messages.YOU_STOLE)) {
-                String stolenType = content.substring(Messages.YOU_STOLE.length());
-                view.showCardPlayed(nickname, String.valueOf(CardType.CAT_CARD));
-                view.showCardDrawn(stolenType);
-            } else if (content.startsWith(Messages.STOLEN_FROM_YOU)) {
-                String stolenType = content.substring(Messages.STOLEN_FROM_YOU.length());
-                view.showStolenCard(stolenType);
-            } else if (content.startsWith(Messages.DEFUSED)) {
-                view.showDefuseUsed();
-            } else if (content.startsWith(Messages.SKIP_OK)) {
-                view.showCardPlayed(nickname, String.valueOf(CardType.SKIP));
-            } else if (content.startsWith(Messages.ATTACK_OK)) {
-                view.showCardPlayed(nickname, String.valueOf(CardType.ATTACK));
-            } else if (content.startsWith(Messages.SHUFFLE_OK)) {
-                view.showShuffled();
-            } else if (content.startsWith(Messages.CARD_NOT_IN_HAND)) { //TODO Non dovrebbe più servire dopo refactor view
-                view.showCardNotInHand();
-                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            } else if (content.startsWith(Messages.NOT_YOUR_TURN)) {
-                view.showNotYourTurn();
-            } else if (content.startsWith(Messages.MISSING_TARGET)
-                    || content.startsWith(Messages.INVALID_TARGET)) {
-                view.showError("Target non valido.");
-                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            } else if (content.startsWith(Messages.WINNER)) {
-                view.showGameOver(content.substring(Messages.WINNER.length()));
-            } else if (content.startsWith(Messages.REQUEST_HAND)) {
-                queryingForMaster = true;
-                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            } else if (content.startsWith(Messages.ASK_DEFUSE_POSITION)) {
-                askDefusePosition();
-            } else {
-                view.showError(content);
-            }
+            String[] parts = content.split(":", 2);
+            String message = parts[0] + (parts.length > 1 ? ":" : "");
 
+            switch(message){
+                case Messages.PLAYER_LIST:
+                    updatePlayersUI(content);
+                    break;
+                case Messages.HAND_INIT:
+                    gameStarted = true;
+                    processHandInit(content);
+                    break;
+                case Messages.YOUR_TURN:
+                    view.showYourTurn();
+                    if (handReady) sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    else yourTurnPending = true;
+                    break;
+                case Messages.TURN_OF:
+                    String otherPlayer = content.substring(Messages.TURN_OF.length());
+                    yourTurnPending = false;
+                    view.showOtherPlayerTurn(otherPlayer);
+                    break;
+                case Messages.DREW:
+                    String cardType = parts.length > 1 ? parts[1] : "";
+                    if (cardType.equals("EXPLODING_KITTEN")) {
+                        view.showExplosion();
+                        sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, Messages.KITTEN_DRAWN);
+                    } else {
+                        view.showCardDrawn(cardType);
+                    }
+                    break;
+                case Messages.ADD_CARD, Messages.REMOVE_CARD:
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
+                    break;
+                case Messages.REFRESH_HAND:
+                    queryingForMaster = false;
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    break;
+                case Messages.SEE_THE_FUTURE:
+                    String[] cards = content.substring(Messages.SEE_THE_FUTURE.length()).split(",");
+                    view.showSeeTheFuture(Arrays.asList(cards));
+                    break;
+                case Messages.YOU_STOLE:
+                {
+                    String stolenType = content.substring(Messages.YOU_STOLE.length());
+                    view.showCardPlayed(nickname, String.valueOf(CardType.CAT_CARD));
+                    view.showCardDrawn(stolenType);
+                    break;
+                }
+                case Messages.STOLEN_FROM_YOU: {
+                    String stolenType = content.substring(Messages.STOLEN_FROM_YOU.length());
+                    view.showStolenCard(stolenType);
+                    break;
+                }
+                case Messages.DEFUSED:
+                    view.showDefuseUsed();
+                    break;
+                case Messages.SKIP_OK:
+                    view.showCardPlayed(nickname, String.valueOf(CardType.SKIP));
+                    break;
+                case Messages.ATTACK_OK:
+                    view.showCardPlayed(nickname, String.valueOf(CardType.ATTACK));
+                    break;
+                case Messages.SHUFFLE_OK:
+                    view.showShuffled();
+                    break;
+                case Messages.CARD_NOT_IN_HAND: //TODO Non dovrebbe più servire dopo refactor view
+                    view.showCardNotInHand();
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    break;
+                case Messages.NOT_YOUR_TURN:
+                    view.showNotYourTurn();
+                    break;
+                case Messages.MISSING_TARGET, Messages.INVALID_TARGET:
+                    view.showError("Target non valido.");
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    break;
+                case Messages.WINNER:
+                    view.showGameOver(content.substring(Messages.WINNER.length()));
+                    break;
+                case Messages.REQUEST_HAND:
+                    queryingForMaster = true;
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    break;
+                case Messages.ASK_DEFUSE_POSITION:
+                    askDefusePosition();
+                    break;
+                default:
+                    view.showError(content);
+                    break;
+            }
         }
+
         /**
          * Aggiorna la lista laterale dei giocatori nella View.
          * @param content Stringa contenente la lista dei nomi dei giocatori.
@@ -312,61 +341,73 @@ public class PlayerAgent extends Agent {
          * @param content Il contenuto del messaggio.
          */
         private void dispatchFromHandManagerAgent(String content) {
-            if (content.startsWith(Messages.HAND_READY)) {
-                handReady = true;
-                if (yourTurnPending) {
-                    yourTurnPending = false;
-                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+            String[] parts = content.split(":", 2);
+            String message = parts[0] + (parts.length > 1 ? ":" : "");
+            switch(message){
+                case Messages.HAND_READY: {
+                    handReady = true;
+                    if (yourTurnPending) {
+                        yourTurnPending = false;
+                        sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    }
+                    break;
                 }
-            }
-            if (content.startsWith(Messages.HAND_INIT)) {
-                if (queryingForMaster) {
-                    queryingForMaster = false;
-                    String serialized = content.substring(Messages.HAND_INIT.length());
-                    ACLMessage response = new ACLMessage(ACLMessage.INFORM);
-                    response.addReceiver(gameMasterAID);
-                    response.setContent(Messages.HAND_RESPONSE + serialized);
-                    send(response);
-                } else {
-                    String hand = content.substring(Messages.HAND_INIT.length());
-                    view.showHand(parseHand(hand));
+                case Messages.HAND_INIT:{
+                    if (queryingForMaster) {
+                        queryingForMaster = false;
+                        String serialized = content.substring(Messages.HAND_INIT.length());
+                        ACLMessage response = new ACLMessage(ACLMessage.INFORM);
+                        response.addReceiver(gameMasterAID);
+                        response.setContent(Messages.HAND_RESPONSE + serialized);
+                        send(response);
+                    } else {
+                        String hand = content.substring(Messages.HAND_INIT.length());
+                        view.showHand(parseHand(hand));
 
-                    new Thread(() -> {
-                        String input = view.askAction();
-                        ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                        toGM.addReceiver(gameMasterAID);
-                        toGM.setContent(input);
-                        myAgent.send(toGM);
-                    }).start();
+                        new Thread(() -> {
+                            String input = view.askAction();
+                            ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
+                            toGM.addReceiver(gameMasterAID);
+                            toGM.setContent(input);
+                            myAgent.send(toGM);
+                        }).start();
+                    }
+                    break;
                 }
             }
+
         }
         /**
          * Gestisce i messaggi provenienti dall'agente KittenDefense.
          * @param content Il contenuto del messaggio.
          */
         private void dispatchFromKittenDefenseAgent(String content) {
-            if (content.startsWith(Messages.SHOW_ELIMINATED)) {
-                view.showYouAreEliminated();
-            }
-            else if (content.startsWith(Messages.ASK_DEFUSE_POSITION)) {
-                askDefusePosition();
-            }
-            else if (content.startsWith(Messages.REFRESH_HAND_AFTER_DEFUSE)) {
-                sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
-            }
-            else if (content.startsWith(Messages.PLAYER_ELIMINATED)) {
-                System.out.println("[DEBUG] Giocatore eliminato. Notifico il Master.");
-                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.addReceiver(gameMasterAID);
-                msg.setContent(Messages.PLAYER_ELIMINATED);
-                send(msg);
-            }
-            else {
-                ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
-                toGM.addReceiver(gameMasterAID);
-                toGM.setContent(content);
-                send(toGM);
+            String[] parts = content.split(":", 2);
+            String msg = parts[0] + (parts.length > 1 ? ":" : "");
+
+            switch(msg){
+                case Messages.SHOW_ELIMINATED:
+                    view.showYouAreEliminated();
+                    break;
+                case Messages.ASK_DEFUSE_POSITION:
+                    askDefusePosition();
+                    break;
+                case Messages.REFRESH_HAND_AFTER_DEFUSE:
+                    sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
+                    break;
+                case Messages.PLAYER_ELIMINATED:
+                    System.out.println("[DEBUG] Giocatore eliminato. Notifico il Master.");
+                    ACLMessage message = new ACLMessage(ACLMessage.INFORM);
+                    message.addReceiver(gameMasterAID);
+                    message.setContent(Messages.PLAYER_ELIMINATED);
+                    send(message);
+                    break;
+                default:
+                    ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);
+                    toGM.addReceiver(gameMasterAID);
+                    toGM.setContent(content);
+                    send(toGM);
+                    break;
             }
         }
     }
