@@ -3,6 +3,8 @@ package explodingkittens.game.view;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,6 +46,15 @@ public class GameView {
     private JLabel    nicknameLabel;
     private JPanel    actionPanel;
     private JPanel    playersPanel;
+    private static final Map<String, String> CARD_DESCRIPTIONS = Map.of(
+            "EXPLODING_KITTEN", "Esplodi! A meno che tu non abbia un Defuse.",
+            "DEFUSE",           "Neutralizza un Exploding Kitten.",
+            "SKIP",             "Termina il tuo turno senza pescare.",
+            "ATTACK",           "Termina il tuo turno e il prossimo giocatore deve fare 2 turni.",
+            "SHUFFLE",          "Mescola il mazzo.",
+            "SEE_THE_FUTURE",   "Guarda le prime 3 carte del mazzo.",
+            "CAT_CARD",         "Usala in coppia per rubare una carta a un avversario."
+    );
     private DefaultListModel<String> playersListModel;
     private JList<String> playersList;
     private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
@@ -82,6 +93,18 @@ public class GameView {
         fileNames.put("WINNER",            "winner.png") ;
         return fileNames;
     }
+
+    private static Map<String, String> getCardDescriptionsMap() {
+        Map<String, String> cardDescriptions = new HashMap<>();
+        cardDescriptions.put("DEFUSE",               "Neutralizza un Exploding Kitten.");
+        cardDescriptions.put("SKIP",                 "Termina il tuo turno senza pescare.");
+        cardDescriptions.put("ATTACK",               "Termina il tuo turno e il prossimo giocatore deve fare 2 turni.");
+        cardDescriptions.put("SHUFFLE",              "Mescola il mazzo.");
+        cardDescriptions.put("SEE_THE_FUTURE",       "Guarda le prime 3 carte del mazzo.");
+        cardDescriptions.put(  "CAT_CARD",           "Usala in coppia per rubare una carta a un avversario.");
+        return cardDescriptions;
+    }
+
 
     private void buildUI() {
         frame = new JFrame("Exploding Kittens");
@@ -285,6 +308,39 @@ public class GameView {
         card.setPreferredSize(new Dimension(110, 170));
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        //Mouse listener per mostrare tooltip con descrizione quando si fa hover su carta
+        String description = CARD_DESCRIPTIONS.getOrDefault(cardType.trim(), "Carta sconosciuta.");
+        card.addMouseListener(new MouseAdapter() {
+            private Popup tooltip;
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                JLabel tip = new JLabel("<html><body style='width:160px;padding:6px'>"
+                        + "<b>" + cardName(cardType) + "</b><br>" + description
+                        + "</body></html>");
+                tip.setBackground(BG_PANEL);
+                tip.setForeground(TEXT_PRIMARY);
+                tip.setFont(FONT_LABEL);
+                tip.setOpaque(true);
+                tip.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+
+                Point loc = card.getLocationOnScreen();
+                tooltip = PopupFactory.getSharedInstance().getPopup(
+                        card, tip, loc.x + 115, loc.y);
+                tooltip.show();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (tooltip != null) { tooltip.hide(); tooltip = null; }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (tooltip != null) { tooltip.hide(); tooltip = null; }
+            }
+        });
 
         // Logica click su immagine carte
         card.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -700,7 +756,6 @@ public class GameView {
         }
     }
 
-    //TODO Mostrare solo nomi avversari
     private void askCatCardTarget() {
         java.util.List<String> validPlayers = new java.util.ArrayList<>();
         String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
