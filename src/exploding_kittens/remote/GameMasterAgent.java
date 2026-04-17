@@ -126,7 +126,20 @@ public class GameMasterAgent extends AbstractMasterAgent {
     private class StartGameBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
-            setupAndStartGame();
+            deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
+            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+            DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
+
+            for (Player player : gameState.getActivePlayers()) {
+                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                msg.addReceiver(new AID(player.getAgentName(), true));
+                msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
+                send(msg);
+            }
+
+            System.out.println("Partita avviata!");
+            broadcastPlayersList();
+            nextTurn();
             addBehaviour(new HandleActionBehaviour());
             startPlayerTimeoutChecker();
         }
