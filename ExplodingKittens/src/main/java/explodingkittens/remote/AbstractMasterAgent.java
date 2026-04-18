@@ -316,13 +316,13 @@ public abstract class AbstractMasterAgent extends Agent {
             broadcastPlayersList();
             System.out.println(eliminated.getNickname() + " eliminato.");
         }
-        if(gameStarted) {
+
             if (gameState.isGameOver()) {
                 announceWinner();
             } else {
                 nextTurn();
             }
-        }
+
     }
 
 

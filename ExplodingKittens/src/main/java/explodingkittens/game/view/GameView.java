@@ -68,15 +68,16 @@ public class GameView {
         Map<String, String> fileNames = getStringImageNameMap();
         for (Map.Entry<String, String> entry : fileNames.entrySet()) {
             try {
-                File file = new File("src/main/resources/" + entry.getValue());
-                if (file.exists()) {
-                    BufferedImage img = ImageIO.read(file);
+                java.io.InputStream is = getClass().getResourceAsStream("/" + entry.getValue());
+                if (is != null) {
+                    BufferedImage img = ImageIO.read(is);
                     cardImages.put(entry.getKey(), img);
                 } else {
-                    System.err.println("[GameView] Immagine non trovata: " + file.getPath());
+                    System.err.println("[GameView] Immagine non trovata nel classpath: /" + entry.getValue());
                 }
             } catch (Exception e) {
                 System.err.println("[GameView] Errore caricamento immagine: " + entry.getValue());
+                e.printStackTrace();
             }
         }
     }
