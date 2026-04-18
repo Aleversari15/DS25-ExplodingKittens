@@ -1,7 +1,4 @@
-package explodingkittens;
-
-import explodingkittens.game.model.*;
-
+package explodingkittens.game;
 
 
 public class PlayerTest {

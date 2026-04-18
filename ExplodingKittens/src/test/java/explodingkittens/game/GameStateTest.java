@@ -1,4 +1,4 @@
-package explodingkittens;
+package explodingkittens.game;
 
 
 import explodingkittens.game.model.GameState;
