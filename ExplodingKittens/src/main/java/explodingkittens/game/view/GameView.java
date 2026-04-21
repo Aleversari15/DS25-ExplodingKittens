@@ -45,6 +45,7 @@ public class GameView {
     private JLabel    turnLabel;
     private JLabel    nicknameLabel;
     private JPanel    actionPanel;
+    private boolean isPlayerTurn = false;
     private JPanel    playersPanel;
     private static final Map<String, String> CARD_DESCRIPTIONS = Map.of(
             "EXPLODING_KITTEN", "Esplodi! A meno che tu non abbia un Defuse.",
@@ -473,6 +474,9 @@ public class GameView {
             turnLabel.setText("E' il tuo turno!");
             turnLabel.setForeground(ACCENT_GREEN);
             appendLog("\n E' il tuo turno!");
+
+            isPlayerTurn = true;
+            setActionsEnabled(isPlayerTurn);
         });
     }
 
@@ -484,7 +488,8 @@ public class GameView {
             turnLabel.setText("Turno di: " + nickname);
             turnLabel.setForeground(ACCENT_BLUE);
             appendLog(" Sta giocando: " + nickname);
-            setActionsEnabled(false);
+            isPlayerTurn = false;
+            setActionsEnabled(isPlayerTurn);
         });
     }
 
@@ -506,7 +511,7 @@ public class GameView {
             }
             handPanel.revalidate();
             handPanel.repaint();
-            setActionsEnabled(true);
+            setActionsEnabled(isPlayerTurn); //testare
         });
     }
 
@@ -647,7 +652,7 @@ public class GameView {
     }
 
     public String askAction() {
-        SwingUtilities.invokeLater(() -> setActionsEnabled(true));
+        SwingUtilities.invokeLater(() -> setActionsEnabled(isPlayerTurn));
         try {
             return inputQueue.take();
         } catch (InterruptedException e) {
