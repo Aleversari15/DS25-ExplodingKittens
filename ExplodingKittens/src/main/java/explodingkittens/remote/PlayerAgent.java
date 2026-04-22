@@ -74,6 +74,7 @@ public class PlayerAgent extends Agent {
             }
         });
     }
+
     /**
      * Crea e avvia dinamicamente i sotto-agenti HandManager e KittenDefense
      * all'interno dello stesso container del PlayerAgent.
@@ -90,6 +91,38 @@ public class PlayerAgent extends Agent {
             container.createNewAgent(kdName, "explodingkittens.remote.KittenDefenseAgent", new Object[]{getAID(), handManagerAID}).start();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+    /**
+     * Esegue la pulizia delle risorse prima della terminazione dell'agente.
+     * Questo metodo viene invocato automaticamente quando l'agente viene rimosso (doDelete).
+     * Si occupa di terminare forzatamente i sotto-agenti specializzati per evitare
+     * la presenza di agenti "zombie" nel container.
+     */
+    @Override
+    protected void takeDown() {
+        System.out.println("PlayerAgent " + nickname + " in fase di terminazione. Killando sottoagenti...");
+        killSubAgent(handManagerAID);
+        killSubAgent(kittenDefenseAID);
+        super.takeDown();
+    }
+    /**
+     * Termina un sotto-agente specifico utilizzando il suo AID.
+     * Recupera l'AgentController dal container locale e invoca il comando kill.
+     * @param aid L'Agent Identifier del sotto-agente da terminare.
+     */
+    private void killSubAgent(AID aid) {
+        if (aid != null) {
+            try {
+                AgentController controller = getContainerController().getAgent(aid.getLocalName());
+                if (controller != null) {
+                    controller.kill();
+                    System.out.println("Sottoagente " + aid.getLocalName() + " terminato.");
+                }
+            } catch (Exception e) {
+                System.err.println("Errore nel terminare l'agente " + aid.getLocalName());
+                e.printStackTrace();
+            }
         }
     }
 
