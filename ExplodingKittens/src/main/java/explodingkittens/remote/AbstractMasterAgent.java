@@ -263,7 +263,11 @@ public abstract class AbstractMasterAgent extends Agent {
         reply.setPerformative(ACLMessage.CONFIRM);
         reply.setContent(Messages.ATTACK_OK);
         send(reply);
-        gameState.nextTurn();
+
+        Player current = gameState.getCurrentPlayer();
+        do {
+            gameState.nextTurn();
+        } while (current == gameState.getCurrentPlayer());
         gameState.setTurnsToPlay(2);
         nextTurn();
     }
