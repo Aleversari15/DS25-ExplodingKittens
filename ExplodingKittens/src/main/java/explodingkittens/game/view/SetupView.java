@@ -17,6 +17,7 @@ public class SetupView {
     private JSpinner playerSpinner;
     private JButton startButton;
     private JLabel errorLabel;
+    private JLabel countLabel;
 
     public SetupView() {
         buildUI();
@@ -62,8 +63,9 @@ public class SetupView {
         gbc.insets = new Insets(0, 0, 5, 0);
         mainPanel.add(errorLabel, gbc);
 
+
         //Scelta numero giocatori
-        JLabel countLabel = new JLabel("NUMERO GIOCATORI (2-4):");
+        countLabel = new JLabel("NUMERO GIOCATORI (2-4):");
         countLabel.setForeground(TEXT_PRIMARY);
         gbc.gridy = 4;
         mainPanel.add(countLabel, gbc);
@@ -73,15 +75,26 @@ public class SetupView {
         gbc.gridy = 5;
         mainPanel.add(playerSpinner, gbc);
 
+
         // Bottone per entrare in partita
-        startButton = new JButton("ENTRA IN PARTITA");
+        startButton = new JButton("CONFERMA");
         styleButton(startButton);
-        gbc.gridy = 6;
+        gbc.gridy = 6 ;
         gbc.insets = new Insets(30, 0, 10, 0);
         mainPanel.add(startButton, gbc);
 
         frame.add(mainPanel);
         frame.setVisible(true);
+    }
+
+    public void setAsHost(boolean isHost) {
+        SwingUtilities.invokeLater(() -> {
+            countLabel.setVisible(isHost);
+            playerSpinner.setVisible(isHost);
+            frame.revalidate();
+            frame.repaint();
+            frame.pack();
+        });
     }
 
     private void styleTextField(JTextField field) {
@@ -110,7 +123,9 @@ public class SetupView {
     }
 
     public String getPlayerName() { return nameField.getText().trim(); }
-    public int getPlayerCount() { return (int) playerSpinner.getValue(); }
+    public int getPlayerCount() {
+        return (int) playerSpinner.getValue() ;
+    }
     public void addStartListener(java.awt.event.ActionListener al) { startButton.addActionListener(al); }
     public void close() { frame.dispose(); }
     public void showNicknameError(String message) {
@@ -122,7 +137,15 @@ public class SetupView {
             startButton.setEnabled(true);
         });
     }
+    public void updateButtonText(String text) {
+        startButton.setText(text);
+    }
 
+    public void removeListeners() {
+        for (java.awt.event.ActionListener al : startButton.getActionListeners()) {
+            startButton.removeActionListener(al);
+        }
+    }
     public void setStartButtonEnabled(boolean enabled) {
         SwingUtilities.invokeLater(() -> startButton.setEnabled(enabled));
     }
