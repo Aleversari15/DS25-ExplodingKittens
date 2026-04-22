@@ -9,29 +9,41 @@ import jade.lang.acl.ACLMessage;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Agente creato per effettuare controlli prima di permettere all'utente di unirsi alla partita.
- * Al momento contatta il server per controllare se il nickname inserito dall'utente nella setUp
- * view è già utilizzato da uno dei giocatori registati o se è valido.
+ * Agente specializzato nella validazione pre-ingresso dei client.
+ * Questo agente funge da intermediario sincrono tra l'interfaccia di setup e il GameMaster.
+ * Esegue una verifica atomica che comprende:
+ * 1)La disponibilità del nickname scelto (evitando duplicati).
+ * 2)Lo stato attuale della lobby per determinare il ruolo del client (Host o Guest).
+ * Comunica il risultato al thread chiamante attraverso una {@link BlockingQueue},
+ * restituendo codici di stato predefiniti (es. VALID_HOST, VALID_GUEST, INVALID).
  */
 public class NicknameCheckerAgent extends Agent {
 
     @Override
     protected void setup() {
         String nickname = (String) getArguments()[0];
-        BlockingQueue<Boolean> result = (BlockingQueue<Boolean>) getArguments()[1];
+        BlockingQueue<String> resultQueue = (BlockingQueue<String>) getArguments()[1];
+
 
         AID gameMasterAID = findGameMaster();
+
+        if (gameMasterAID == null) {
+            resultQueue.offer("ERROR_NO_SERVER");
+            doDelete();
+            return;
+        }
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
         msg.addReceiver(gameMasterAID);
-        msg.setContent(Messages.NICKNAME_CHECK + nickname);
+        msg.setContent(Messages.NICKNAME_AND_LOBBY_CHECK + nickname);
         send(msg);
 
         ACLMessage reply = blockingReceive(3000);
 
-        if (reply != null && reply.getContent().equals(Messages.NICKNAME_OK)) {
-            result.offer(true);
+        if (reply != null) {
+            // Il contenuto sarà "VALID_HOST", "VALID_GUEST" o "INVALID"
+            resultQueue.offer(reply.getContent());
         } else {
-            result.offer(false);
+            resultQueue.offer("ERROR_TIMEOUT");
         }
 
         doDelete();

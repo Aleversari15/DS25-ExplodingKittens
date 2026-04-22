@@ -72,8 +72,8 @@ public class GameMasterAgent extends AbstractMasterAgent {
 
             if (msg != null) {
                 String content = msg.getContent();
-                if (content.startsWith(Messages.NICKNAME_CHECK)) {
-                    String requestedNick = content.substring(Messages.NICKNAME_CHECK.length()).trim();
+                if (content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
+                    String requestedNick = content.substring(Messages.NICKNAME_AND_LOBBY_CHECK.length()).trim();
                     for(Player player : gameState.getActivePlayers()){
                         System.out.println("Nickname in GameMaster:" + player.getNickname());
                     }
@@ -84,13 +84,11 @@ public class GameMasterAgent extends AbstractMasterAgent {
 
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(alreadyUsed ? Messages.NICKNAME_TAKEN : Messages.NICKNAME_OK);
+                    reply.setContent(alreadyUsed ? Messages.INVALID_NICKNAME : expectedPlayers == -1 ? Messages.VALID_HOST: Messages.VALID_GUEST);
                     send(reply);
                     return;
                 }
                 if (content != null && content.startsWith(Messages.JOIN)) {
-
-                    // Il primo giocatore imposta il numero atteso
                     if (expectedPlayers == -1) {
                         try {
                             String[] parts = content.split(":");

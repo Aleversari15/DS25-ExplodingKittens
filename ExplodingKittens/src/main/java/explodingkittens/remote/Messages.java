@@ -77,9 +77,12 @@ public final class Messages {
     public static final String CLIENT_ALIVE     = "CLIENT_ALIVE";
     public static final String PLAYER_DISCONNECTED = "PLAYER_DISCONNECTED:";
 
-    //Per validazione nickname in fase di registrazione
-    public static final String NICKNAME_CHECK  = "NICKNAME_CHECK:";
-    public static final String NICKNAME_OK     = "NICKNAME_OK";
-    public static final String NICKNAME_TAKEN  = "NICKNAME_TAKEN";
+    //controllo nickname e ruolo Host
+    public static final String NICKNAME_AND_LOBBY_CHECK = "CHECK_NICK_AND_LOBBY:";
+
+    //Risposte del Master al Checker
+    public static final String VALID_HOST        = "VALID_HOST";
+    public static final String VALID_GUEST       = "VALID_GUEST";
+    public static final String INVALID_NICKNAME  = "INVALID";
 
 }
