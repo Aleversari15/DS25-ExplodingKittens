@@ -16,6 +16,7 @@ public class SetupView {
     private JTextField nameField;
     private JSpinner playerSpinner;
     private JButton startButton;
+    private JLabel errorLabel;
 
     public SetupView() {
         buildUI();
@@ -52,21 +53,30 @@ public class SetupView {
         gbc.gridy = 2;
         mainPanel.add(nameField, gbc);
 
+        //Label per mostrare eventuali errori nella scelta del nickmname
+        errorLabel = new JLabel("");
+        errorLabel.setForeground(new Color(220, 60, 60));
+        errorLabel.setFont(new Font("Georgia", Font.PLAIN, 12));
+        errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 0, 5, 0);
+        mainPanel.add(errorLabel, gbc);
+
         //Scelta numero giocatori
         JLabel countLabel = new JLabel("NUMERO GIOCATORI (2-4):");
         countLabel.setForeground(TEXT_PRIMARY);
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         mainPanel.add(countLabel, gbc);
         SpinnerModel model = new SpinnerNumberModel(2, 2, 4, 1);
         playerSpinner = new JSpinner(model);
         styleSpinner(playerSpinner);
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         mainPanel.add(playerSpinner, gbc);
 
         // Bottone per entrare in partita
         startButton = new JButton("ENTRA IN PARTITA");
         styleButton(startButton);
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         gbc.insets = new Insets(30, 0, 10, 0);
         mainPanel.add(startButton, gbc);
 
@@ -103,4 +113,17 @@ public class SetupView {
     public int getPlayerCount() { return (int) playerSpinner.getValue(); }
     public void addStartListener(java.awt.event.ActionListener al) { startButton.addActionListener(al); }
     public void close() { frame.dispose(); }
+    public void showNicknameError(String message) {
+        SwingUtilities.invokeLater(() -> {
+            errorLabel.setText(message);
+            nameField.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(220, 60, 60), 2),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+            startButton.setEnabled(true);
+        });
+    }
+
+    public void setStartButtonEnabled(boolean enabled) {
+        SwingUtilities.invokeLater(() -> startButton.setEnabled(enabled));
+    }
 }

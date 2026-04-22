@@ -1,8 +1,6 @@
 package explodingkittens.remote;
 
 public final class Messages {
-
-    //TODO rimettere in ordine la suddivisione in sezioni al termine del progetto
     private Messages() {}
 
     //Registrazione
@@ -79,5 +77,9 @@ public final class Messages {
     public static final String CLIENT_ALIVE     = "CLIENT_ALIVE";
     public static final String PLAYER_DISCONNECTED = "PLAYER_DISCONNECTED:";
 
+    //Per validazione nickname in fase di registrazione
+    public static final String NICKNAME_CHECK  = "NICKNAME_CHECK:";
+    public static final String NICKNAME_OK     = "NICKNAME_OK";
+    public static final String NICKNAME_TAKEN  = "NICKNAME_TAKEN";
 
 }
