@@ -680,6 +680,16 @@ public class GameView {
             panel.add(imgLabel, BorderLayout.WEST);
         }
 
+        SpinnerNumberModel model = new SpinnerNumberModel(0, 0, deckSize, 1);
+        JSpinner spinner = new JSpinner(model);
+
+        JComponent editor = spinner.getEditor();
+        JFormattedTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
+        textField.setBackground(BG_CARD);
+        textField.setForeground(TEXT_PRIMARY);
+        textField.setCaretColor(ACCENT_ORANGE);
+        textField.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        spinner.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
         JPanel rightPanel = new JPanel(new BorderLayout(6, 6));
         rightPanel.setBackground(BG_PANEL);
 
@@ -687,20 +697,13 @@ public class GameView {
         titleLabel.setFont(new Font("Georgia", Font.BOLD, 13));
         titleLabel.setForeground(ACCENT_RED);
 
-        JLabel msgLabel = new JLabel("Per fortuna hai un Defuse e non esplodi. In che posizione vuoi reinserire il Kitten nel mazzo?");
+        JLabel msgLabel = new JLabel("In che posizione vuoi reinserire il Kitten?");
         msgLabel.setFont(FONT_LABEL);
         msgLabel.setForeground(TEXT_PRIMARY);
 
-        JLabel hintLabel = new JLabel("(0 = cima del mazzo, max " + deckSize + ")");
+        JLabel hintLabel = new JLabel("(Range consentito: 0 - " + deckSize + ")");
         hintLabel.setFont(new Font("Georgia", Font.PLAIN, 11));
         hintLabel.setForeground(TEXT_MUTED);
-
-        JTextField inputField = new JTextField("0", 5);
-        inputField.setFont(FONT_LABEL);
-        inputField.setBackground(BG_CARD);
-        inputField.setForeground(TEXT_PRIMARY);
-        inputField.setCaretColor(ACCENT_ORANGE);
-        inputField.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
 
         JPanel textPanel = new JPanel(new GridLayout(3, 1, 0, 4));
         textPanel.setBackground(BG_PANEL);
@@ -709,7 +712,7 @@ public class GameView {
         textPanel.add(hintLabel);
 
         rightPanel.add(textPanel, BorderLayout.NORTH);
-        rightPanel.add(inputField, BorderLayout.CENTER);
+        rightPanel.add(spinner, BorderLayout.CENTER);
         panel.add(rightPanel, BorderLayout.CENTER);
 
         SwingUtilities.invokeLater(() -> {
@@ -718,12 +721,13 @@ public class GameView {
 
             int result = JOptionPane.showConfirmDialog(
                     frame, panel,
-                    "Exploding Kitten pescato!",
+                    "Defuse in azione!",
                     JOptionPane.OK_CANCEL_OPTION,
                     JOptionPane.PLAIN_MESSAGE
             );
-            String pos = (result == JOptionPane.OK_OPTION) ? inputField.getText().trim() : "0";
-            inputQueue.offer("DEFUSE:" + pos);
+
+            int selectedPos = (result == JOptionPane.OK_OPTION) ? (int) spinner.getValue() : 0;
+            inputQueue.offer("DEFUSE:" + selectedPos);
         });
 
         try {
