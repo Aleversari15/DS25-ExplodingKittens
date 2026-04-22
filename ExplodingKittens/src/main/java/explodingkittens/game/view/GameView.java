@@ -243,12 +243,9 @@ public class GameView {
         // Bottoni azione
         actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         actionPanel.setBackground(BG_DARK);
-
-        //TODO: disabilitare bottone quando non è il turno del giocatore (sembra essere disabilitato solo all'inizio)
         JButton drawBtn    = buildButton();
         drawBtn.addActionListener(e    -> inputQueue.offer("DRAW"));
         actionPanel.add(drawBtn);
-
         setActionsEnabled(false);
 
         panel.add(handWrapper, BorderLayout.CENTER);
