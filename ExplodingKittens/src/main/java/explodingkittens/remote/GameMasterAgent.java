@@ -79,7 +79,6 @@ public class GameMasterAgent extends AbstractMasterAgent {
                     }
                     boolean alreadyUsed = gameState.getActivePlayers().stream()
                             .anyMatch(p -> p.getNickname()
-                                    .replace("Player_", "")
                                     .equalsIgnoreCase(requestedNick));
 
                     ACLMessage reply = msg.createReply();
