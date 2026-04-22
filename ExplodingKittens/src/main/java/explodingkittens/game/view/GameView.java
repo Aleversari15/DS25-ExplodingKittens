@@ -666,7 +666,7 @@ public class GameView {
      * @param deckSize dimensione del mazzo.
      * @return la posizione in cui inserire l'exploding kitten.
      */
-    //TODO controllare perchè non viene utilizzato input
+
     public int askDefusePosition(int deckSize) {
         inputQueue.clear();
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -691,7 +691,7 @@ public class GameView {
         msgLabel.setFont(FONT_LABEL);
         msgLabel.setForeground(TEXT_PRIMARY);
 
-        JLabel hintLabel = new JLabel("(0 = cima del mazzo)");
+        JLabel hintLabel = new JLabel("(0 = cima del mazzo, max " + deckSize + ")");
         hintLabel.setFont(new Font("Georgia", Font.PLAIN, 11));
         hintLabel.setForeground(TEXT_MUTED);
 

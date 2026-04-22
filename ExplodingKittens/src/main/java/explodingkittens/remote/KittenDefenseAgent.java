@@ -13,6 +13,7 @@ public class KittenDefenseAgent extends Agent {
 
     private AID playerAgentAID;
     private AID handManagerAID;
+    private String currentDeckSize;
 
     @Override
     protected void setup() {
@@ -34,8 +35,12 @@ public class KittenDefenseAgent extends Agent {
             );
             ACLMessage msg = myAgent.receive(mt);
 
-            if (msg != null && msg.getContent().equals(Messages.KITTEN_DRAWN)) {
-                System.out.println("KittenDefenseAgent: Kitten pescato, controllo Defuse...");
+            if (msg != null && msg.getContent().startsWith(Messages.KITTEN_DRAWN)) {
+
+                String content = msg.getContent();
+                if (content.contains(":")) {
+                    currentDeckSize = content.split(":")[1];
+                }
 
                 // Chiede all'HandManager se c'è un Defuse disponibile
                 ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
@@ -87,7 +92,6 @@ public class KittenDefenseAgent extends Agent {
     private class UseDefuseBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
-            // Rimuove il Defuse dalla mano tramite HandManager
             ACLMessage useDefuse = new ACLMessage(ACLMessage.INFORM);
             useDefuse.addReceiver(handManagerAID);
             useDefuse.setContent(Messages.USE_DEFUSE);
@@ -102,7 +106,7 @@ public class KittenDefenseAgent extends Agent {
             // Chiede al PlayerAgent di raccogliere la posizione dall'utente
             ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
             ask.addReceiver(playerAgentAID);
-            ask.setContent(Messages.ASK_DEFUSE_POSITION);
+            ask.setContent(Messages.ASK_DEFUSE_POSITION + currentDeckSize);
             send(ask);
 
             // Aspetta la risposta con la posizione
@@ -121,8 +125,6 @@ public class KittenDefenseAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
-                System.out.println("[DEBUG KittenDefense] Ricevuta posizione dal Player: " + msg.getContent());
-
                 if (msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
                     // Inoltra la mossa al PlayerAgent
                     ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
@@ -130,7 +132,6 @@ public class KittenDefenseAgent extends Agent {
                     defuse.setContent(msg.getContent());
                     send(defuse);
 
-                    System.out.println("[DEBUG KittenDefense] Messaggio inoltrato al PlayerAgent. Addio.");
                     myAgent.removeBehaviour(this);
                 }
             } else {

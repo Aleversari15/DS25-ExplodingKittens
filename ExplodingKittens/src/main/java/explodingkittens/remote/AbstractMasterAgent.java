@@ -228,7 +228,7 @@ public abstract class AbstractMasterAgent extends Agent {
         if (drawn.getType() == CardType.EXPLODING_KITTEN) {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent(Messages.DREW_KITTEN);
+            reply.setContent(Messages.DREW_KITTEN + ":"+ deck.size());
             send(reply);
         } else {
             ACLMessage addCard = new ACLMessage(ACLMessage.INFORM);

@@ -225,9 +225,13 @@ public class PlayerAgent extends Agent {
                     break;
                 case Messages.DREW:
                     String cardType = parts.length > 1 ? parts[1] : "";
-                    if (cardType.equals("EXPLODING_KITTEN")) {
+                    if (cardType.startsWith("EXPLODING_KITTEN")) {
                         view.showExplosion();
-                        sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, Messages.KITTEN_DRAWN);
+                        String deckSize = cardType.split(":")[1];
+                        if(deckSize == null) deckSize = "0";
+                        String msgContent = Messages.KITTEN_DRAWN + ":" + deckSize;
+                        sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, msgContent);
+
                     } else {
                         view.showCardDrawn(cardType);
                     }
@@ -286,7 +290,8 @@ public class PlayerAgent extends Agent {
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
                     break;
                 case Messages.ASK_DEFUSE_POSITION:
-                    askDefusePosition();
+                    int deckSizeKD = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
+                    askDefusePosition(deckSizeKD);
                     break;
                 default:
                     view.showError(content);
@@ -327,9 +332,9 @@ public class PlayerAgent extends Agent {
          * Avvia un thread separato per richiedere all'utente la posizione del mazzo
          * in cui reinserire l'Exploding Kitten dopo un Defuse.
          */
-        private void askDefusePosition() {
+        private void askDefusePosition(int deckSize) {
             new Thread(() -> {
-                int position = view.askDefusePosition(0);
+                int position = view.askDefusePosition(deckSize);
                 ACLMessage defuseMsg = new ACLMessage(ACLMessage.REQUEST);
                 defuseMsg.addReceiver(gameMasterAID);
                 defuseMsg.setContent(Messages.DEFUSE_PLAY + position);
@@ -390,7 +395,8 @@ public class PlayerAgent extends Agent {
                     view.showYouAreEliminated();
                     break;
                 case Messages.ASK_DEFUSE_POSITION:
-                    askDefusePosition();
+                    int deckSizeGM = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
+                    askDefusePosition(deckSizeGM);
                     break;
                 case Messages.REFRESH_HAND_AFTER_DEFUSE:
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
