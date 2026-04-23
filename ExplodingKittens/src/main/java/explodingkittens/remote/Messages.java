@@ -6,6 +6,7 @@ public final class Messages {
     //Registrazione
     public static final String JOIN              = "JOIN";
     public static final String JOINED            = "JOINED";
+    public static final String LOBBY_FULL        = "LOBBY_FULL";
 
 
     //Gestione turno

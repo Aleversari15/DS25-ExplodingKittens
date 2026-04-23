@@ -47,7 +47,12 @@ public class ClientMain {
                             setupView.close();
                             startJadeAgent(nickname, 0, false);
                         });
-                    } else {
+                    } else if (result.equals(Messages.LOBBY_FULL)) {
+                        SwingUtilities.invokeLater(() -> {
+                            setupView.showNicknameError("La lobby è piena! Impossibile partecipare.");
+                            setupView.setStartButtonEnabled(true);
+                        });
+                    }else {
                         SwingUtilities.invokeLater(() -> {
                             setupView.showNicknameError("Errore: " + result);
                             setupView.setStartButtonEnabled(true);
@@ -57,8 +62,6 @@ public class ClientMain {
             });
         });
     }
-
-    // Aggiunto parametro isHost
     private static void startJadeAgent(String nickname, int requestedPlayers, boolean isHost) {
         try {
             Runtime rt = Runtime.instance();
@@ -80,7 +83,6 @@ public class ClientMain {
         }
     }
 
-    // NUOVO METODO SINCRONIZZATO
     private static String checkNickAndLobbyWithServer(String nickname) {
         try {
             BlockingQueue<String> queue = new ArrayBlockingQueue<>(1);

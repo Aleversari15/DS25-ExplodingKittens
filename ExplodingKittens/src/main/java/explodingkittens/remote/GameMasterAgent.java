@@ -74,6 +74,7 @@ public class GameMasterAgent extends AbstractMasterAgent {
                 String content = msg.getContent();
                 if (content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
                     String requestedNick = content.substring(Messages.NICKNAME_AND_LOBBY_CHECK.length()).trim();
+
                     for(Player player : gameState.getActivePlayers()){
                         System.out.println("Nickname in GameMaster:" + player.getNickname());
                     }
@@ -84,7 +85,15 @@ public class GameMasterAgent extends AbstractMasterAgent {
 
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(alreadyUsed ? Messages.INVALID_NICKNAME : expectedPlayers == -1 ? Messages.VALID_HOST: Messages.VALID_GUEST);
+                    if (alreadyUsed) {
+                        reply.setContent(Messages.INVALID_NICKNAME);
+                    }
+                    else if (expectedPlayers != -1 && gameState.getActivePlayers().size() >= expectedPlayers) {
+                        reply.setContent(Messages.LOBBY_FULL);
+                    }
+                    else {
+                        reply.setContent(expectedPlayers == -1 ? Messages.VALID_HOST : Messages.VALID_GUEST);
+                    }
                     send(reply);
                     return;
                 }
@@ -124,7 +133,7 @@ public class GameMasterAgent extends AbstractMasterAgent {
                     } else {
                         ACLMessage reply = msg.createReply();
                         reply.setPerformative(ACLMessage.REFUSE);
-                        reply.setContent("LOBBY_FULL");
+                        reply.setContent(Messages.LOBBY_FULL);
                         send(reply);
                     }
                 }
@@ -167,6 +176,14 @@ public class GameMasterAgent extends AbstractMasterAgent {
         public void action() {
             ACLMessage msg = myAgent.receive();
             if (msg != null) {
+                String content = msg.getContent();
+                if (content.startsWith(Messages.JOIN) || content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
+                    ACLMessage reply = msg.createReply();
+                    reply.setPerformative(ACLMessage.REFUSE);
+                    reply.setContent(Messages.LOBBY_FULL);
+                    send(reply);
+                    return;
+                }
                 processGameMessage(msg);
             } else {
                 block();
