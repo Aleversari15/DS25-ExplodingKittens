@@ -103,7 +103,7 @@ public class BackupMasterAgent extends AbstractMasterAgent {
         });
     }
 
-    //TODO: Ricontrollare
+
     /**
      * Gestisce eventuali JOIN che arrivano dopo la promozione
      * (es. un giocatore che si riconnette).
@@ -122,7 +122,7 @@ public class BackupMasterAgent extends AbstractMasterAgent {
             }
         }
         // -------------------------
-
+        //TODO: Ricontrollare
         Player existing = findPlayerByAgentName(playerName);
 
         if (existing != null) {

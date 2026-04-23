@@ -316,7 +316,7 @@ public class PlayerAgent extends Agent {
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
                     break;
                 case Messages.WINNER:
-                    view.showGameOver(content.substring(Messages.WINNER.length()));
+                    view.showGameOver(parts[1]);
                     break;
                 case Messages.REQUEST_HAND:
                     queryingForMaster = true;
@@ -325,6 +325,9 @@ public class PlayerAgent extends Agent {
                 case Messages.ASK_DEFUSE_POSITION:
                     int deckSizeKD = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
                     askDefusePosition(deckSizeKD);
+                    break;
+                case Messages.PLAYER_DISCONNECTED:
+                    view.showPlayerDisconnected(parts[1]);
                     break;
                 default:
                     view.showError(content);
