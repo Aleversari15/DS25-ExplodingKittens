@@ -77,7 +77,7 @@ public class ClientMain {
 
             AgentContainer container = rt.createAgentContainer(profile);
             AgentController player = container.createNewAgent(
-                    "Player_" + nickname,
+                    nickname,
                     "explodingkittens.remote.PlayerAgent",
                     // Passiamo anche isHost all'agente
                     new Object[]{ nickname, requestedPlayers, isHost }

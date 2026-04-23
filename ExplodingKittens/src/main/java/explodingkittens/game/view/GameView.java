@@ -741,7 +741,6 @@ public class GameView {
      * Metodo per mostrare nel log che un player si è disconnesso e rimozione dalla lista dei players.
      * @param nickname del player disconnesso.
      */
-    //TODO verificare perchè non è utilizzato, potremmo aver perso qualcosa durante il merge
     public void showPlayerDisconnected(String nickname) {
         SwingUtilities.invokeLater(() -> {
             appendLog("[DISCONNESSIONE] " + nickname + " si è disconnesso.");

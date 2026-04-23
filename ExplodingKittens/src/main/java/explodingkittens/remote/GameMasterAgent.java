@@ -80,7 +80,6 @@ public class GameMasterAgent extends AbstractMasterAgent {
                     }
                     boolean alreadyUsed = gameState.getActivePlayers().stream()
                             .anyMatch(p -> p.getNickname()
-                                    .replace("Player_", "")
                                     .equalsIgnoreCase(requestedNick));
 
                     ACLMessage reply = msg.createReply();
@@ -195,7 +194,7 @@ public class GameMasterAgent extends AbstractMasterAgent {
      * Behaviour 4
      */
     private void startPlayerTimeoutChecker() {
-        addBehaviour(new TickerBehaviour(this, 5000) {
+        addBehaviour(new TickerBehaviour(this, 2000) {
             @Override
             protected void onTick() {
                 checkDisconnectedPlayers();

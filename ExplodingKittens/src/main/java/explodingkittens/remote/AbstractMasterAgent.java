@@ -23,7 +23,7 @@ public abstract class AbstractMasterAgent extends Agent {
     protected String     pendingCatTarget = null;
     protected static final String CAT_LOG = "[Master - CAT_CARD] "; //TODO da rimuovere al termine dei test
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
-    protected static final long PLAYER_TIMEOUT = 10000;
+    protected static final long PLAYER_TIMEOUT = 5000;
     protected boolean gameStarted = false;
     protected int expectedPlayers = -1;
 
@@ -459,6 +459,7 @@ public abstract class AbstractMasterAgent extends Agent {
 
     protected void announceWinner() {
         Player winner = gameState.getWinner();
+        System.out.println("Vincitore in announce Winner:" + winner.getNickname());
         if (winner != null) {
             broadcastToAll(Messages.WINNER + winner.getNickname());
             System.out.println("Vincitore: " + winner.getNickname());
@@ -528,15 +529,15 @@ public abstract class AbstractMasterAgent extends Agent {
 
             gameState.removePlayer(p);
             clientsAliveRegister.remove(p.getAgentName());
+            System.out.println("[DEBUG] Giocatori rimasti: " + gameState.getActivePlayers().size());
+            broadcastToAll(Messages.PLAYER_DISCONNECTED + p.getNickname());
 
-            broadcastToAll("PLAYER_DISCONNECTED:" + p.getNickname());
-
-            if (gameState.isGameOver() && gameStarted) {
+            if (gameState.isGameOver() /*&& gameStarted*/) {
                 announceWinner();
                 return;
             }
 
-            if (wasCurrent && gameStarted) {
+            if (wasCurrent && gameStarted) { //TODO Serve gamestarted?
                 gameState.nextTurn();
                 nextTurn();
             }
