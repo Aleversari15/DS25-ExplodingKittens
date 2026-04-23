@@ -47,15 +47,21 @@ public class BackupMasterAgent extends AbstractMasterAgent {
 
             if (!promoted) {
                 // Fase backup
-                if (content.startsWith(explodingkittens.remote.Messages.HEARTBEAT)) {
+                if (content.startsWith(Messages.HEARTBEAT)) {
                     lastHeartbeatTime = System.currentTimeMillis();
-                    reconstructState(content.substring(explodingkittens.remote.Messages.HEARTBEAT.length() + 1));
+                    reconstructState(content.substring(Messages.HEARTBEAT.length() + 1));
                 }
-            } else {
-                // Fase master
-                if (content.startsWith(Messages.JOIN)) {
+            }else {
+                //fase master
+                if (content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
+                    handleNicknameCheckAfterPromotion(msg, content);
+                }
+
+                else if (content.startsWith(Messages.JOIN)) {
                     handleJoinAfterPromotion(msg, content);
-                } else {
+                }
+
+                else {
                     processGameMessage(msg);
                 }
             }
@@ -106,7 +112,6 @@ public class BackupMasterAgent extends AbstractMasterAgent {
     //TODO: Ricontrollare
     /**
      * Gestisce eventuali JOIN che arrivano dopo la promozione
-     * (es. un giocatore che si riconnette).
      */
     private void handleJoinAfterPromotion(ACLMessage msg, String content) {
         String playerName = msg.getSender().getName();
@@ -157,11 +162,36 @@ public class BackupMasterAgent extends AbstractMasterAgent {
         } else {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.REFUSE);
-            reply.setContent(gameStarted ? "GAME_IN_PROGRESS" : "LOBBY_FULL");
+            reply.setContent(Messages.LOBBY_FULL);
             send(reply);
         }
     }
 
+    /**
+     * Duplica la logica di validazione del GameMaster primario.
+     */
+    private void handleNicknameCheckAfterPromotion(ACLMessage msg, String content) {
+        String requestedNick = content.substring(Messages.NICKNAME_AND_LOBBY_CHECK.length()).trim();
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
+
+        boolean alreadyUsed = gameState.getActivePlayers().stream()
+                .anyMatch(p -> p.getNickname()
+                        .replace("Player_", "")
+                        .equalsIgnoreCase(requestedNick));
+
+        if (alreadyUsed) {
+            reply.setContent(Messages.INVALID_NICKNAME);
+        }
+        else if (expectedPlayers != -1 && gameState.getActivePlayers().size() >= expectedPlayers) {
+            reply.setContent(Messages.LOBBY_FULL);
+        }
+        else {
+            reply.setContent(expectedPlayers <= 0 ? Messages.VALID_HOST : Messages.VALID_GUEST);
+        }
+
+        send(reply);
+    }
 
     private void registerInDF() {
         try {

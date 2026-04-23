@@ -52,7 +52,13 @@ public class ClientMain {
                             setupView.showNicknameError("La lobby è piena! Impossibile partecipare.");
                             setupView.setStartButtonEnabled(true);
                         });
-                    }else {
+                    }else if (result.equals(Messages.INVALID_NICKNAME)){
+                        SwingUtilities.invokeLater(() -> {
+                            setupView.showNicknameError("Nickname già in uso! Scegline un altro.");
+                            setupView.setStartButtonEnabled(true);
+                        });
+                    }
+                    else{
                         SwingUtilities.invokeLater(() -> {
                             setupView.showNicknameError("Errore: " + result);
                             setupView.setStartButtonEnabled(true);
