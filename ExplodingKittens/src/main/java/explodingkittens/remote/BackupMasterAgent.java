@@ -126,37 +126,16 @@ public class BackupMasterAgent extends AbstractMasterAgent {
                 this.expectedPlayers = 2;
             }
         }
-        // -------------------------
-        //TODO: Ricontrollare
-        Player existing = findPlayerByAgentName(playerName);
-
-        if (existing != null) {
-            // Giocatore già noto (Riconnessione)
-            ACLMessage reply = msg.createReply();
-            reply.setPerformative(ACLMessage.CONFIRM);
-            reply.setContent(Messages.JOINED);
-            send(reply);
-
-            if (gameStarted) nextTurn();
-            return;
-        }
-
-        // Nuovo giocatore
         if (!gameStarted && gameState.getActivePlayers().size() < expectedPlayers) {
             Player newPlayer = new Player(playerName, msg.getSender().getLocalName());
             gameState.addPlayer(newPlayer);
 
-            System.out.println("Registrato post-failover: " + playerName
-                    + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
-
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.CONFIRM);
             reply.setContent(Messages.JOINED);
             send(reply);
 
-            // Se con questo nuovo arrivo la lobby è piena, facciamo partire il gioco
             if (gameState.getActivePlayers().size() == expectedPlayers) {
-                System.out.println("Lobby completata post-failover. Inizializzo partita...");
                 setupAndStartGame();
             }
         } else {
