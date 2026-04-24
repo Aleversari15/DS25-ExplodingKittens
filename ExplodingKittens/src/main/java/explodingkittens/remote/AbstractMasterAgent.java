@@ -16,12 +16,10 @@ import java.util.stream.Collectors;
  * (setup, heartbeat, promozione, lobby).
  */
 public abstract class AbstractMasterAgent extends Agent {
-
     protected GameState gameState;
     protected Deck      deck;
     protected ACLMessage pendingAction    = null;
     protected String     pendingCatTarget = null;
-    protected static final String CAT_LOG = "[Master - CAT_CARD] "; //TODO da rimuovere al termine dei test
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
     protected static final long PLAYER_TIMEOUT = 5000;
     protected boolean gameStarted = false;
@@ -97,8 +95,7 @@ public abstract class AbstractMasterAgent extends Agent {
     }
 
     protected void setupAndStartGame() {
-        if (gameStarted) return;
-
+        if (gameStarted) return; //TODO serve ancora?
         this.gameStarted = true;
         if (deck == null || deck.size() == 0) {
             deck = DeckBuilder.prepareBaseDeck(expectedPlayers);

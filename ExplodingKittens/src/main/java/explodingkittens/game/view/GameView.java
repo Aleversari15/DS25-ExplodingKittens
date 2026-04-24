@@ -46,7 +46,6 @@ public class GameView {
     private JLabel    nicknameLabel;
     private JPanel    actionPanel;
     private boolean isPlayerTurn = false;
-    private JPanel    playersPanel;
     private static final Map<String, String> CARD_DESCRIPTIONS = Map.of(
             "EXPLODING_KITTEN", "Esplodi! A meno che tu non abbia un Defuse.",
             "DEFUSE",           "Neutralizza un Exploding Kitten.",
@@ -106,7 +105,6 @@ public class GameView {
         cardDescriptions.put(  "CAT_CARD",           "Usala in coppia per rubare una carta a un avversario.");
         return cardDescriptions;
     }
-
 
     private void buildUI() {
         frame = new JFrame("Exploding Kittens");
@@ -378,6 +376,72 @@ public class GameView {
         }
     }
 
+    private void askCatCardTarget() {
+        java.util.List<String> validPlayers = new java.util.ArrayList<>();
+        String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
+
+        for (int i = 0; i < playersListModel.size(); i++) {
+            String playerName = playersListModel.getElementAt(i);
+            if (playerName.startsWith(" • ")) {playerName = playerName.substring(3);}
+            if (!playerName.equals(myName)) { validPlayers.add(playerName);}
+        }
+
+        if (validPlayers.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Nessun bersaglio disponibile!", "Cat Card", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String[] options = validPlayers.toArray(new String[0]);
+        String target = (String) JOptionPane.showInputDialog(
+                frame,
+                "Seleziona il giocatore da cui vuoi rubare:",
+                "Cat Card",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (target != null && !target.isBlank()) {
+            inputQueue.offer("CAT_CARD:" + target.trim());
+        }
+    }
+
+    private void setActionsEnabled(boolean enabled) {
+        for (Component c : actionPanel.getComponents()) c.setEnabled(enabled);
+    }
+
+    private void appendLog(String text) {
+        logArea.append(text + "\n");
+        logArea.setCaretPosition(logArea.getDocument().getLength());
+    }
+
+    private String cardName(String cardType) {
+        return switch (cardType.trim()) {
+            case "EXPLODING_KITTEN" -> "Exploding Kitten";
+            case "DEFUSE"           -> "Defuse";
+            case "SKIP"             -> "Skip";
+            case "ATTACK"           -> "Attack";
+            case "SHUFFLE"          -> "Shuffle";
+            case "SEE_THE_FUTURE"   -> "See the Future";
+            case "CAT_CARD"         -> "Cat Card";
+            default                 -> cardType;
+        };
+    }
+
+    private Color cardAccent(String cardType) {
+        return switch (cardType.trim()) {
+            case "EXPLODING_KITTEN" -> ACCENT_RED;
+            case "DEFUSE"           -> ACCENT_GREEN;
+            case "SKIP"             -> ACCENT_BLUE;
+            case "ATTACK"           -> ACCENT_RED;
+            case "SHUFFLE"          -> ACCENT_ORANGE;
+            case "SEE_THE_FUTURE"   -> ACCENT_PURPLE;
+            case "CAT_CARD"         -> ACCENT_ORANGE;
+            default                 -> TEXT_MUTED;
+        };
+    }
+
     /**
      * Aggiorna la lista dei giocatori attivi nella barra laterale.
      * @param playerNames nicknames dei giocatori attivi.
@@ -414,7 +478,6 @@ public class GameView {
             appendLog("[Sistema] In attesa degli altri giocatori...");
         });
     }
-
 
     /**
      * Mostra popup di fine partita contenente il nome del vincitore.
@@ -648,6 +711,11 @@ public class GameView {
         SwingUtilities.invokeLater(() -> appendLog("Shuffle: Il mazzo e' stato mischiato."));
     }
 
+    //TODO controllare
+    /**
+     *
+     * @return
+     */
     public String askAction() {
         SwingUtilities.invokeLater(() -> setActionsEnabled(isPlayerTurn));
         try {
@@ -663,7 +731,6 @@ public class GameView {
      * @param deckSize dimensione del mazzo.
      * @return la posizione in cui inserire l'exploding kitten.
      */
-
     public int askDefusePosition(int deckSize) {
         inputQueue.clear();
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -736,7 +803,6 @@ public class GameView {
     }
 
 
-
     /**
      * Metodo per mostrare nel log che un player si è disconnesso e rimozione dalla lista dei players.
      * @param nickname del player disconnesso.
@@ -762,70 +828,5 @@ public class GameView {
         }
     }
 
-    private void askCatCardTarget() {
-        java.util.List<String> validPlayers = new java.util.ArrayList<>();
-        String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
 
-
-        for (int i = 0; i < playersListModel.size(); i++) {
-            String playerName = playersListModel.getElementAt(i);
-            if (playerName.startsWith(" • ")) {playerName = playerName.substring(3);}
-            if (!playerName.equals(myName)) { validPlayers.add(playerName);}
-        }
-
-        if (validPlayers.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Nessun bersaglio disponibile!", "Cat Card", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String[] options = validPlayers.toArray(new String[0]);
-        String target = (String) JOptionPane.showInputDialog(
-                frame,
-                "Seleziona il giocatore da cui vuoi rubare:",
-                "Cat Card",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
-
-        if (target != null && !target.isBlank()) {
-            inputQueue.offer("CAT_CARD:" + target.trim());
-        }
-    }
-
-    private void setActionsEnabled(boolean enabled) {
-        for (Component c : actionPanel.getComponents()) c.setEnabled(enabled);
-    }
-
-    private void appendLog(String text) {
-        logArea.append(text + "\n");
-        logArea.setCaretPosition(logArea.getDocument().getLength());
-    }
-
-    private String cardName(String cardType) {
-        return switch (cardType.trim()) {
-            case "EXPLODING_KITTEN" -> "Exploding Kitten";
-            case "DEFUSE"           -> "Defuse";
-            case "SKIP"             -> "Skip";
-            case "ATTACK"           -> "Attack";
-            case "SHUFFLE"          -> "Shuffle";
-            case "SEE_THE_FUTURE"   -> "See the Future";
-            case "CAT_CARD"         -> "Cat Card";
-            default                 -> cardType;
-        };
-    }
-
-    private Color cardAccent(String cardType) {
-        return switch (cardType.trim()) {
-            case "EXPLODING_KITTEN" -> ACCENT_RED;
-            case "DEFUSE"           -> ACCENT_GREEN;
-            case "SKIP"             -> ACCENT_BLUE;
-            case "ATTACK"           -> ACCENT_RED;
-            case "SHUFFLE"          -> ACCENT_ORANGE;
-            case "SEE_THE_FUTURE"   -> ACCENT_PURPLE;
-            case "CAT_CARD"         -> ACCENT_ORANGE;
-            default                 -> TEXT_MUTED;
-        };
-    }
 }

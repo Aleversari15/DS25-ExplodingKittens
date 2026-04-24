@@ -5,7 +5,9 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * View utilizzata per far unire i giocatori alla partita.
+ * Setup view utilizzata per far unire i giocatori alla partita.
+ * In questa fase vengono effettuati dei check iniziali sulla validità del nickname (deve essere univoco)
+ * e sulla possibilità di unirsi alla partità (lobby piena o libera).
  */
 public class SetupView {
     private static final Color BG_DARK       = new Color(18, 18, 28);
@@ -87,16 +89,6 @@ public class SetupView {
         frame.setVisible(true);
     }
 
-    public void setAsHost(boolean isHost) {
-        SwingUtilities.invokeLater(() -> {
-            countLabel.setVisible(isHost);
-            playerSpinner.setVisible(isHost);
-            frame.revalidate();
-            frame.repaint();
-            frame.pack();
-        });
-    }
-
     private void styleTextField(JTextField field) {
         field.setBackground(BG_PANEL);
         field.setForeground(Color.WHITE);
@@ -122,12 +114,50 @@ public class SetupView {
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
+    /**
+     *
+     * @param isHost
+     */
+    public void setAsHost(boolean isHost) {
+        SwingUtilities.invokeLater(() -> {
+            countLabel.setVisible(isHost);
+            playerSpinner.setVisible(isHost);
+            frame.revalidate();
+            frame.repaint();
+            frame.pack();
+        });
+    }
+
+    /**
+     * Estrae il nickname inserito in nameField.
+     * @return il nickname inserito dal giocatore.
+     */
     public String getPlayerName() { return nameField.getText().trim(); }
+
+    /**
+     *
+     * @return
+     */
     public int getPlayerCount() {
         return (int) playerSpinner.getValue() ;
     }
+
+    /**
+     *
+     * @param al
+     */
     public void addStartListener(java.awt.event.ActionListener al) { startButton.addActionListener(al); }
+
+    /**
+     *
+     */
     public void close() { frame.dispose(); }
+
+    /**
+     * Metodo utilizzato per informare l'utente di eventuali errori in fase di
+     * registrazione alla partita (es. nickname invalido)
+     * @param message
+     */
     public void showNicknameError(String message) {
         SwingUtilities.invokeLater(() -> {
             errorLabel.setText(message);
@@ -137,15 +167,43 @@ public class SetupView {
             startButton.setEnabled(true);
         });
     }
+
+    /**
+     * Metodo usato per informare l'utente che il sistema sta effettuando controlli
+     * sul nickname e sulla possibilità di unirsi al gioco (lobby piena).
+     * @param message
+     */
+    public void showStatusMessage(String message) {
+        SwingUtilities.invokeLater(() -> {
+            errorLabel.setText(message);
+            nameField.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(222, 188, 22), 2),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+            startButton.setEnabled(true);
+        });
+    }
+
+    /**
+     * Modifica il testo contenuto nel pulsante.
+     * @param text da mostrare in startButton.
+     */
     public void updateButtonText(String text) {
         startButton.setText(text);
     }
 
+    /**
+     *
+     */
     public void removeListeners() {
         for (java.awt.event.ActionListener al : startButton.getActionListeners()) {
             startButton.removeActionListener(al);
         }
     }
+
+    /**
+     * Attiva o disattiva il pulsante start button.
+     * @param enabled se true, attiva il bottone, se false lo disattiva.
+     */
     public void setStartButtonEnabled(boolean enabled) {
         SwingUtilities.invokeLater(() -> startButton.setEnabled(enabled));
     }
