@@ -161,6 +161,7 @@ public class SetupView {
     public void showNicknameError(String message) {
         SwingUtilities.invokeLater(() -> {
             errorLabel.setText(message);
+            errorLabel.setForeground(new Color(220, 60, 60));
             nameField.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(220, 60, 60), 2),
                     BorderFactory.createEmptyBorder(5, 10, 5, 10)));
@@ -176,6 +177,7 @@ public class SetupView {
     public void showStatusMessage(String message) {
         SwingUtilities.invokeLater(() -> {
             errorLabel.setText(message);
+            errorLabel.setForeground(new Color(222, 188, 22));
             nameField.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(222, 188, 22), 2),
                     BorderFactory.createEmptyBorder(5, 10, 5, 10)));

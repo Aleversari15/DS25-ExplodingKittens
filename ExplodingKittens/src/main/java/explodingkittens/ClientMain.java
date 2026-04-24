@@ -27,10 +27,12 @@ public class ClientMain {
                 setupView.setStartButtonEnabled(false);
 
                 new Thread(() -> {
+                    setupView.showStatusMessage("Stiamo controllando il nickname e la lobby...");
                     String result = checkNickAndLobbyWithServer(nickname);
 
                     if (result.equals(Messages.VALID_HOST)) {
                         SwingUtilities.invokeLater(() -> {
+                            setupView.showStatusMessage("");
                             setupView.setAsHost(true);
                             setupView.setStartButtonEnabled(true);
                             setupView.updateButtonText("AVVIA PARTITA");
@@ -44,22 +46,26 @@ public class ClientMain {
                         });
                     } else if (result.equals(Messages.VALID_GUEST)) {
                         SwingUtilities.invokeLater(() -> {
+                            setupView.showStatusMessage("");
                             setupView.close();
                             startJadeAgent(nickname, 0, false);
                         });
                     } else if (result.equals(Messages.LOBBY_FULL)) {
                         SwingUtilities.invokeLater(() -> {
+                            setupView.showStatusMessage("");
                             setupView.showNicknameError("La lobby è piena! Impossibile partecipare.");
                             setupView.setStartButtonEnabled(true);
                         });
                     }else if (result.equals(Messages.INVALID_NICKNAME)){
                         SwingUtilities.invokeLater(() -> {
+                            setupView.showStatusMessage("");
                             setupView.showNicknameError("Nickname già in uso! Scegline un altro.");
                             setupView.setStartButtonEnabled(true);
                         });
                     }
                     else{
                         SwingUtilities.invokeLater(() -> {
+                            setupView.showStatusMessage("");
                             setupView.showNicknameError("Errore: " + result);
                             setupView.setStartButtonEnabled(true);
                         });
