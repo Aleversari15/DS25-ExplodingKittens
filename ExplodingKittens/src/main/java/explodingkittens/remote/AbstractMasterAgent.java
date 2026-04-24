@@ -21,7 +21,6 @@ public abstract class AbstractMasterAgent extends Agent {
     protected Deck      deck;
     protected ACLMessage pendingAction    = null;
     protected String     pendingCatTarget = null;
-    protected static final String CAT_LOG = "[Master - CAT_CARD] "; //TODO da rimuovere al termine dei test
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
     protected static final long PLAYER_TIMEOUT = 5000;
     protected boolean gameStarted = false;
