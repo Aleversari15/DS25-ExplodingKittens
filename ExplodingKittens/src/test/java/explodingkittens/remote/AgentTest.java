@@ -1,48 +1,37 @@
 package explodingkittens.remote;
 
-import jade.core.AID;
-import jade.core.Agent;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
-import jade.core.behaviours.CyclicBehaviour;
-import jade.core.behaviours.OneShotBehaviour;
-import jade.lang.acl.ACLMessage;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Test per la verifica delle interazioni tra Agenti.
+ * Questa classe testa il ciclo di vita iniziale della partita, focalizzandosi sulla
+ * comunicazione tra GameMasterAgent e TestPlayerAgent.
+ */
 public class AgentTest {
 
-    private Runtime rt;
     private AgentContainer container;
-
-    // Per testare in modo asincrono la ricezione dei messaggi da parte dell'agente tester
-    public static CountDownLatch messageLatch;
     public static List<String> receivedMessages;
 
     @BeforeEach
     void setUp() {
-        rt = Runtime.instance();
-        // reset del Runtime per evitare che thread residui blocchino il nuovo container
+        Runtime rt = Runtime.instance();
         rt.setCloseVM(false);
-
         Profile p = new ProfileImpl();
-        // porta casuale per evitare conflitti con altri test o istanze di JADE
         p.setParameter(Profile.MAIN_PORT, String.valueOf(1099 + (int)(Math.random() * 100)));
         container = rt.createMainContainer(p);
-
         receivedMessages = Collections.synchronizedList(new ArrayList<>());
     }
 
@@ -51,84 +40,18 @@ public class AgentTest {
         try {
             if (container != null) {
                 container.kill();
-                // Piccola attesa per permettere al sistema operativo di liberare la porta
                 Thread.sleep(500);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
     /**
-     * Agente fittizio che simula un Player per testare il flusso dei messaggi scambiati col GameMaster.
+     * Verifica la procedura di JOIN di un singolo giocatore.
+     *@throws Exception se si verificano errori nella creazione o avvio degli agenti.
      */
-    public static class DummyPlayerTesterAgent extends Agent {
-        @Override
-        protected void setup() {
-            // Invio della prima richiesta di join
-            addBehaviour(new OneShotBehaviour() {
-                @Override
-                public void action() {
-                    ACLMessage joinMsg = new ACLMessage(ACLMessage.REQUEST);
-                    joinMsg.addReceiver(new AID("GameMasterTest", AID.ISLOCALNAME));
-                    joinMsg.setContent(Messages.JOIN + ":2");
-                    send(joinMsg);
-                }
-            });
-
-            // Ascolto delle risposte
-            addBehaviour(new CyclicBehaviour() {
-                @Override
-                public void action() {
-                    ACLMessage msg = receive();
-                    if (msg != null) {
-                        receivedMessages.add(msg.getContent());
-                        if (messageLatch != null) {
-                            messageLatch.countDown();
-                        }
-                    } else {
-                        block();
-                    }
-                }
-            });
-        }
-    }
-
     @Test
-    @DisplayName("Test di Join: Il Master deve confermare la registrazione e scambiare il messaggio di JOINED")
     public void testPlayerJoinCommunication() throws Exception {
-        // Prepariamo l'attesa per 1 messaggio (il JOINED)
-        messageLatch = new CountDownLatch(1);
-
-        AgentController master = container.createNewAgent(
-                "GameMasterTest",
-                "explodingkittens.remote.GameMasterAgent",
-                new Object[]{"2"} // il gameMaster aspetta 2 giocatori
-        );
-        master.start();
-
-        // Aspettiamo che il Master si registri
-        Thread.sleep(1000);
-
-        // Crea un Dummy Player che si unisce al Master e invia un messaggio di JOIN reale
-        AgentController dummyPlayer = container.createNewAgent(
-                "GiocatoreTester",
-                DummyPlayerTesterAgent.class.getName(),
-                new Object[]{}
-        );
-        dummyPlayer.start();
-
-        // Attendiamo asincronamente la ricezione del messaggio (timeout per non bloccare i test)
-        boolean received = messageLatch.await(5, TimeUnit.SECONDS);
-
-        assertTrue(received, "L'agente non ha ricevuto nessuna risposta in tempo");
-        assertTrue(receivedMessages.contains(Messages.JOINED), "Il messaggio di JOINED non  stato scambiato con successo");
-    }
-
-    @Test
-    @DisplayName("Test di Partita: Simula l'avvio di una partita con 2 giocatori e verifica lo scambio dei messaggi iniziali")
-    public void testGameStartWithTwoPlayers() throws Exception {
-        messageLatch = new CountDownLatch(2);
 
         AgentController master = container.createNewAgent(
                 "GameMasterTest",
@@ -136,41 +59,72 @@ public class AgentTest {
                 new Object[]{"2"}
         );
         master.start();
-
         Thread.sleep(1000);
 
-        // primo giocatore (DummyPlayerTesterAgent)
+        AgentController player = container.createNewAgent(
+                "GiocatoreTester",
+                "explodingkittens.remote.TestPlayerAgent",
+                new Object[]{"ACTIVE"}
+        );
+        player.start();
+
+        TestPlayerAgent instance = null;
+        long deadline = System.currentTimeMillis() + 5000;
+        while (instance == null && System.currentTimeMillis() < deadline) {
+            instance = TestPlayerAgent.getInstance("GiocatoreTester");
+            Thread.sleep(100);
+        }
+        assertNotNull(instance, "TestPlayerAgent non si è registrato nel registry");
+
+        boolean joined = instance.waitFor(instance::isJoinConfirmed, 5000);
+        assertTrue(joined, "Il GameMaster non ha confermato il JOIN con JOINED");
+    }
+
+/**
+ * Verifica l'avvio della partita al raggiungimento del numero di giocatori attesi.
+ */
+    @Test
+    public void testGameStartWithTwoPlayers() throws Exception {
+
+        AgentController master = container.createNewAgent(
+                "GameMasterTest",
+                "explodingkittens.remote.GameMasterAgent",
+                new Object[]{"2"}
+        );
+        master.start();
+        Thread.sleep(1000);
+
         AgentController player1 = container.createNewAgent(
-                "GiocatoreTester1",
-                DummyPlayerTesterAgent.class.getName(),
-                new Object[]{}
+                "Giocatore1",
+                "explodingkittens.remote.TestPlayerAgent",
+                new Object[]{"ACTIVE"}
         );
         player1.start();
+        Thread.sleep(500);
 
-        Thread.sleep(1000);
-
-        // secondo giocatore (PlayerAgent)
         AgentController player2 = container.createNewAgent(
-                "GiocatoreReale2",
-                "explodingkittens.remote.PlayerAgent",
-                new Object[]{"Giocatore 2", 2}
+                "Giocatore2",
+                "explodingkittens.remote.TestPlayerAgent",
+                new Object[]{"ACTIVE"}
         );
         player2.start();
 
-        // Aspettiamo la ricezione di multipli messaggi
-        messageLatch.await(5, TimeUnit.SECONDS);
-
-        assertNotNull(master.getState(), "Lo stato del Master non dovrebbe essere nullo");
-        assertTrue(receivedMessages.contains(Messages.JOINED), "Il master deve aver risposto con il JOINED al test player");
-
-        // Verifica la ricezione della mano iniziale o dei turni inizializzati da parte dello scambrio start partita
-        boolean hasCardMessages = false;
-        long turnMessages = 0;
-        for (String msg : receivedMessages) {
-            if (msg.startsWith(Messages.ADD_CARD)) hasCardMessages = true;
-            if (msg.contains("TURN")) turnMessages++;
+        TestPlayerAgent instance1 = null, instance2 = null;
+        long deadline = System.currentTimeMillis() + 5000;
+        while ((instance1 == null || instance2 == null) && System.currentTimeMillis() < deadline) {
+            instance1 = TestPlayerAgent.getInstance("Giocatore1");
+            instance2 = TestPlayerAgent.getInstance("Giocatore2");
+            Thread.sleep(100);
         }
-        assertTrue(hasCardMessages || turnMessages > 0, "Durante l'avvio della partita dovrebbero essere stati scambiati messaggi sulle carte o sui turni");
+
+        assertNotNull(instance1, "Giocatore1 non trovato nel registry");
+        assertNotNull(instance2, "Giocatore2 non trovato nel registry");
+
+        boolean game1Started = instance1.waitFor(instance1::isGameStarted, 10000);
+        boolean game2Started = instance2.waitFor(instance2::isGameStarted, 10000);
+
+        assertTrue(game1Started, "Giocatore1 non ha ricevuto HAND_INIT");
+        assertTrue(game2Started, "Giocatore2 non ha ricevuto HAND_INIT");
     }
 
 }
