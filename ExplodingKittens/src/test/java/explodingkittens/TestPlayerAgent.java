@@ -10,7 +10,6 @@ import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
