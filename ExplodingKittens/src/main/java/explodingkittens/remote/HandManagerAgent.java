@@ -8,6 +8,9 @@ import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 
+/**
+ * Agente che gestisce la mano di carte di un giocatore.
+ */
 public class HandManagerAgent extends Agent {
 
     private Hand hand;
@@ -22,7 +25,11 @@ public class HandManagerAgent extends Agent {
         System.out.println("HandManagerAgent avviato per: " + playerAgentAID.getLocalName());
         addBehaviour(new HandleMsgBehaviour());
     }
-
+    /**
+     * Comportamento ciclico che processa le richieste di gestione della mano.
+     * Risponde a comandi per inizializzare la mano, aggiungere e rimuovere carte
+     * o interrogare sulla presenza di un Defuse.
+     */
 
     private class HandleMsgBehaviour extends CyclicBehaviour {
         @Override
@@ -74,7 +81,10 @@ public class HandManagerAgent extends Agent {
                 block();
             }
         }
-
+        /**
+         * Popola la mano iniziale.
+         * @param serialized stringa contenente i tipi di carta separati da virgola.
+         */
         private void initHand(String serialized) {
             if (serialized == null || serialized.isEmpty()) return;
             String[] types = serialized.split(",");
@@ -87,10 +97,13 @@ public class HandManagerAgent extends Agent {
             System.out.println("Mano inizializzata: " + serializeHand());
             ACLMessage ready = new ACLMessage(ACLMessage.INFORM);
             ready.addReceiver(playerAgentAID);
-            ready.setContent(Messages.HAND_READY); //per notificare il player che la mano è pronta
+            ready.setContent(Messages.HAND_READY);
             send(ready);
         }
-
+        /**
+         * Serializza la mano in una stringa per la trasmissione.
+         * @return una stringa rappresentante i tipi di carta.
+         */
         private String serializeHand() {
             StringBuilder sb = new StringBuilder();
             for (Card c : hand.getCards()) {
