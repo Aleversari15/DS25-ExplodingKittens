@@ -1,6 +1,5 @@
-package explodingkittens;
+package explodingkittens.remote;
 
-import explodingkittens.remote.Messages;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
