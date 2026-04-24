@@ -18,6 +18,8 @@ import java.util.ArrayList;
  */
 public class DeckTest {
 
+    private static final int ON_TOP = 0;
+    private static final int SEE_THE_FUTURE_CARDS = 3;
     private Deck deck;
     private Card skipCard;
     private Card attackCard;
@@ -90,5 +92,21 @@ public class DeckTest {
         assertTrue(hasSkip, "Il mazzo deve contenere la carta Skip");
         assertTrue(hasAttack, "Il mazzo deve contenere la carta Attack");
     }
+
+    /**
+     * Testa la funzionalità di "See the Future" quando il mazzo contiene meno carte di quelle che si vorrebbero vedere.
+     */
+    @Test
+    void testSeeTheFutureWithFewCards() {
+        deck.insertCard(attackCard, ON_TOP);
+        deck.insertCard(skipCard, ON_TOP);
+
+        int actualPeek = Math.min(SEE_THE_FUTURE_CARDS, deck.size());
+
+        List<Card> futureCards = deck.peekTop(actualPeek);
+        assertEquals(2, futureCards.size(), "Deve vedere solo le 2 carte presenti");
+        assertEquals(CardType.SKIP, futureCards.get(ON_TOP).getType(), "La prima carta deve essere lo Skip (in cima)");
+    }
+
 
 }
