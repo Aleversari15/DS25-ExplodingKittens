@@ -1,11 +1,12 @@
 package explodingkittens.game;
 
-import explodingkittens.game.model.Card;
-import explodingkittens.game.model.CardType;
-import explodingkittens.game.model.Hand;
+import explodingkittens.game.model.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class HandTest {
 
+    private static final String DEFUSE = "DEFUSE";
     private Hand hand;
     private Card defuseCard;
     private Card catCard;
@@ -24,7 +26,7 @@ public class HandTest {
     @BeforeEach
     void setUp() {
         hand = new Hand();
-        defuseCard = new Card(CardType.DEFUSE, "Defuse", "Neutralize an Exploding Kitten and prevent yourself from exploding.");
+        defuseCard = new Card(CardType.DEFUSE, DEFUSE, "Neutralize an Exploding Kitten and prevent yourself from exploding.");
         catCard = new Card(CardType.CAT_CARD, "Cat Card", "A cute cat card with no special abilities.");
     }
 
@@ -59,6 +61,22 @@ public class HandTest {
         hand.addCard(defuseCard);
         assertTrue(hand.hasCardOfType(CardType.DEFUSE), "Deve essere true per DEFUSE.");
         assertFalse(hand.hasCardOfType(CardType.CAT_CARD), "Deve essere false per CAT_CARD.");
+    }
+
+    /**
+     * Testa che ogni mano dei giocatori contenga una carta DEFUSE.
+     */
+    @Test
+    void testDefuseCardInHand() {
+        int nPlayers = 3;
+        Deck deck = DeckBuilder.prepareBaseDeck(nPlayers);
+        List<Player> players = List.of(new Player("P1", "A1"), new Player("P2", "A2"), new Player("P3", "A3"));
+
+        var hands = DeckBuilder.buildPlayerHands(deck, players);
+
+        for(String hand : hands.values()) {
+            assertTrue(hand.contains(DEFUSE), "Ogni mano deve contenere una carta DEFUSE.");
+        }
     }
 
 
