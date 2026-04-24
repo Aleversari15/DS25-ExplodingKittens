@@ -16,8 +16,8 @@ import java.util.Map;
  * GameMasterAgent è l'agente primario che gestisce lo stato del gioco.
  * Tutta la logica di gioco condivisa è nella classe base AbstractMasterAgent.
  * Qui viene gestito solo: registrazione DF, lobby, heartbeat verso il backup.
- * Implementa 3 behaviours:
- * 1) Lobby, attende il join dei giocatori.
+ * Implementa 4 behaviours:
+ * 1) Gestione lobby, attende il join dei giocatori.
  * 2) Distribuzione carte e avvio della partita.
  * 3) Gestione logica di gioco (contenuta in AbstractMasterAgent)
  * 4) Monitoraggio heartbeat client.
@@ -26,10 +26,16 @@ public class GameMasterAgent extends AbstractMasterAgent {
     private int expectedPlayers = -1;
     private AID backupMasterAID;
 
+    /**
+     * Metodo di inizializzazione dell'agente.
+     * - Registra il servizio nel DF
+     * - Inizializza stato di gioco e mazzo
+     * - Avvia heartbeat verso il backup
+     * - Avvia il behaviour di attesa giocatori
+     */
     @Override
     protected void setup() {
         registerInDF();
-
         Object[] args = getArguments();
         if (args != null && args.length > 0) {
             expectedPlayers = Integer.parseInt(args[0].toString());
@@ -38,16 +44,23 @@ public class GameMasterAgent extends AbstractMasterAgent {
         deck      = new Deck();
 
         startHeartbeat();
-
         System.out.println("GameMaster avviato, aspetto " + expectedPlayers + " giocatori...");
         addBehaviour(new WaitForPlayersBehaviour());
     }
 
+    /**
+     * Metodo chiamato alla terminazione dell'agente.
+     * Effettua la deregistrazione dal Directory Facilitator.
+     */
     @Override
     protected void takeDown() {
         try { DFService.deregister(this); } catch (Exception ignored) {}
     }
 
+    /**
+     * Registra l'agente nel Directory Facilitator (DF)
+     * come servizio di tipo "game-master".
+     */
     private void registerInDF() {
         try {
             DFAgentDescription dfd = new DFAgentDescription();
@@ -220,6 +233,10 @@ public class GameMasterAgent extends AbstractMasterAgent {
         });
     }
 
+    /**
+     * Sincronizza manualmente lo stato con il BackupMasterAgent.
+     * Utilizzato quando cambia lo stato (es. nuovo player).
+     */
     private void sincronize() {
         if (backupMasterAID == null) backupMasterAID = findBackup();
         if (backupMasterAID != null) {
@@ -230,6 +247,10 @@ public class GameMasterAgent extends AbstractMasterAgent {
         }
     }
 
+    /**
+     * Cerca nel Directory Facilitator un agente di tipo "backup-master".
+     * @return AID del BackupMasterAgent se trovato, null altrimenti
+     */
     private AID findBackup() {
         DFAgentDescription template = new DFAgentDescription();
         ServiceDescription sd = new ServiceDescription();
