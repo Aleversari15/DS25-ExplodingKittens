@@ -62,7 +62,7 @@ public class PlayerAgent extends Agent {
 
         System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
-        addBehaviour(new jade.core.behaviours.TickerBehaviour(this, 5000) {
+        addBehaviour(new jade.core.behaviours.TickerBehaviour(this, 1000) {
             @Override
             protected void onTick() {
                 if (gameMasterAID != null) {
