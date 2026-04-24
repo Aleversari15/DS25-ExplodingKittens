@@ -219,7 +219,7 @@ public class FaultTolleranceTest {
         assertEquals("BackupMaster", joinResponse.getSender().getLocalName(), "Il mittente della risposta dovrebbe essere il BackupMaster");
 
     }
-/*
+
     @Test
     public void testHeartbeatExchange() throws Exception {
         AgentController gameMaster = container.createNewAgent("GameMaster", "explodingkittens.remote.GameMasterAgent", new Object[]{"2"});
@@ -242,9 +242,6 @@ public class FaultTolleranceTest {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
-
-                // Rimane in ascolto e raccoglie tutti i messaggi di heartbeat
                 addBehaviour(new CyclicBehaviour() {
                     @Override
                     public void action() {
@@ -265,17 +262,19 @@ public class FaultTolleranceTest {
             }
         };
 
-        AgentController spy = container.acceptNewAgent("BackupMaster", spyAgent);
+        AgentController spy = container.acceptNewAgent("BackupMaster", testerBackupAgent);
         spy.start();
 
-        ACLMessage firstHeartbeat = heartbeatQueue.poll(10, TimeUnit.SECONDS);
-        assertNotNull(firstHeartbeat,
-                "Il GameMaster dovrebbe inviare almeno un heartbeat al BackupMaster");
-        assertEquals(ACLMessage.INFORM, firstHeartbeat.getPerformative(),
-                "L'heartbeat dovrebbe avere performativa INFORM");
-        assertTrue(firstHeartbeat.getContent().startsWith(Messages.HEARTBEAT),
-                "Il contenuto dovrebbe iniziare con HEARTBEAT");
-        assertEquals("GameMaster", firstHeartbeat.getSender().getLocalName(),
-                "Il mittente dell'heartbeat dovrebbe essere il GameMaster");
-    }*/
+        ACLMessage firstHeartbeat = heartbeatMessageQueue.poll(10, TimeUnit.SECONDS);
+        assertNotNull(firstHeartbeat, "Il GameMaster dovrebbe inviare almeno un heartbeat al BackupMaster");
+        assertEquals(ACLMessage.INFORM, firstHeartbeat.getPerformative(), "L'heartbeat dovrebbe avere performativa INFORM");
+        assertTrue(firstHeartbeat.getContent().startsWith(Messages.HEARTBEAT), "Il contenuto dovrebbe iniziare con HEARTBEAT");
+        assertEquals("GameMaster", firstHeartbeat.getSender().getLocalName(), "Il mittente dell'heartbeat dovrebbe essere il GameMaster");
+
+        ACLMessage secondHeartbeat = heartbeatMessageQueue.poll(10, TimeUnit.SECONDS);
+        assertNotNull(secondHeartbeat, "Il GameMaster dovrebbe inviare heartbeat periodicamente");
+        String heartbeatContent = firstHeartbeat.getContent();
+        String statePayload = heartbeatContent.substring(Messages.HEARTBEAT.length() + 1);
+        assertFalse(statePayload.isEmpty(), "L'heartbeat dovrebbe contenere lo stato serializzato del gioco");
+    }
 }
