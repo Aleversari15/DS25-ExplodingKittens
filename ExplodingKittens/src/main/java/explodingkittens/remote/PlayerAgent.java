@@ -304,8 +304,8 @@ public class PlayerAgent extends Agent {
                 case Messages.SHUFFLE_OK:
                     view.showShuffled();
                     break;
-                case Messages.CARD_NOT_IN_HAND: //TODO Non dovrebbe più servire dopo refactor view
-                    view.showCardNotInHand();
+                case Messages.TWO_CAT_NOT_IN_HAND:
+                    view.showTwoCatNotInHand();
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
                     break;
                 case Messages.NOT_YOUR_TURN:

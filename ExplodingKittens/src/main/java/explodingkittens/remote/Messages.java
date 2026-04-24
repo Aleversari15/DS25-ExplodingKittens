@@ -28,7 +28,7 @@ public final class Messages {
     //Risposte GameMaster
     public static final String DREW              = "DREW:";
     public static final String DREW_KITTEN       = "DREW:EXPLODING_KITTEN";
-    public static final String CARD_NOT_IN_HAND  = "CARD_NOT_IN_HAND";
+    public static final String TWO_CAT_NOT_IN_HAND  = "TWO_CAT_NOT_IN_HAND";
     public static final String INVALID_TARGET    = "INVALID_TARGET";
     public static final String MISSING_TARGET    = "MISSING_TARGET";
     public static final String SKIP_OK           = "SKIP_OK";

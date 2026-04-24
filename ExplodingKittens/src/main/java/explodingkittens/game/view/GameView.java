@@ -699,9 +699,8 @@ public class GameView {
         SwingUtilities.invokeLater(() -> appendLog("Errore: Non e' il tuo turno!"));
     }
 
-    //TODO Rimuovere, non dovrebbe più servire dopo refactor view
-    public void showCardNotInHand() {
-        SwingUtilities.invokeLater(() -> appendLog("Errore: Non hai quella carta in mano."));
+    public void showTwoCatNotInHand() {
+        SwingUtilities.invokeLater(() -> appendLog("Non puoi giocare la cat card, devi averne almeno due in mano!"));
     }
 
     /**
