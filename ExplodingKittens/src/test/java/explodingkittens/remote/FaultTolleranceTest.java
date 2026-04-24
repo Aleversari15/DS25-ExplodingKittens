@@ -50,7 +50,6 @@ public class FaultTolleranceTest {
     /**
      * Verifica che il BackupMasterAgent notifichi i player già registrati
      * quando assume il ruolo di Master a seguito di un crash.
-     *
      * Flusso del test:
      * 1. Avvio di GameMaster e BackupMaster.
      * 2. Un player esegue il JOIN con successo sul GameMaster.
@@ -220,4 +219,63 @@ public class FaultTolleranceTest {
         assertEquals("BackupMaster", joinResponse.getSender().getLocalName(), "Il mittente della risposta dovrebbe essere il BackupMaster");
 
     }
+/*
+    @Test
+    public void testHeartbeatExchange() throws Exception {
+        AgentController gameMaster = container.createNewAgent("GameMaster", "explodingkittens.remote.GameMasterAgent", new Object[]{"2"});
+        gameMaster.start();
+
+        final BlockingQueue<ACLMessage> heartbeatMessageQueue = new LinkedBlockingQueue<>();
+
+        Agent testerBackupAgent = new Agent(){
+            @Override
+            protected void setup(){
+                try {
+                    DFAgentDescription dfd = new DFAgentDescription();
+                    dfd.setName(getAID());
+                    ServiceDescription sd = new ServiceDescription();
+                    sd.setType("backup-master");
+                    sd.setName("exploding-kittens-backup");
+                    dfd.addServices(sd);
+                    DFService.register(this, dfd);
+                    System.out.println("[SpyBackup] Registrato nel DF come backup-master");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+
+                // Rimane in ascolto e raccoglie tutti i messaggi di heartbeat
+                addBehaviour(new CyclicBehaviour() {
+                    @Override
+                    public void action() {
+                        ACLMessage msg = receive();
+                        if (msg != null) {
+                            System.out.println("[SpyBackup] Messaggio ricevuto: "
+                                    + "performative=" + ACLMessage.getPerformative(msg.getPerformative())
+                                    + ", content=" + msg.getContent().substring(0, Math.min(50, msg.getContent().length())) + "..."
+                                    + ", sender=" + msg.getSender().getLocalName());
+                            if (msg.getContent().startsWith(Messages.HEARTBEAT)) {
+                                heartbeatMessageQueue.add(msg);
+                            }
+                        } else {
+                            block();
+                        }
+                    }
+                });
+            }
+        };
+
+        AgentController spy = container.acceptNewAgent("BackupMaster", spyAgent);
+        spy.start();
+
+        ACLMessage firstHeartbeat = heartbeatQueue.poll(10, TimeUnit.SECONDS);
+        assertNotNull(firstHeartbeat,
+                "Il GameMaster dovrebbe inviare almeno un heartbeat al BackupMaster");
+        assertEquals(ACLMessage.INFORM, firstHeartbeat.getPerformative(),
+                "L'heartbeat dovrebbe avere performativa INFORM");
+        assertTrue(firstHeartbeat.getContent().startsWith(Messages.HEARTBEAT),
+                "Il contenuto dovrebbe iniziare con HEARTBEAT");
+        assertEquals("GameMaster", firstHeartbeat.getSender().getLocalName(),
+                "Il mittente dell'heartbeat dovrebbe essere il GameMaster");
+    }*/
 }
