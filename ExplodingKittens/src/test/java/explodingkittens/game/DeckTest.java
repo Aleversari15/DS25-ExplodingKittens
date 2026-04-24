@@ -28,8 +28,8 @@ public class DeckTest {
     @BeforeEach
     void setUp() {
         deck = new Deck();
-        skipCard = new Card(CardType.SKIP, "Skip", "End your turn without playing a card.");
-        attackCard = new Card(CardType.ATTACK, "Attack", "End your turn and force the next player to take two turns.");
+        skipCard = new Card(CardType.SKIP, "Skip", "Termina il turno senza pescare una carta.");
+        attackCard = new Card(CardType.ATTACK, "Attack", "Termina il tuo turno e obbliga il prossimo giocatore a giocare due turni.");
     }
 
     /**
