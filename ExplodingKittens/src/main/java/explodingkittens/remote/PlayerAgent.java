@@ -23,7 +23,6 @@ import java.util.List;
  * con i sotto-agenti specializzati per la gestione della mano e la difesa dagli exploding kittens.
  */
 public class PlayerAgent extends Agent {
-
     private AID handManagerAID;
     private AID kittenDefenseAID;
     private AID gameMasterAID;
@@ -93,6 +92,7 @@ public class PlayerAgent extends Agent {
             e.printStackTrace();
         }
     }
+
     /**
      * Esegue la pulizia delle risorse prima della terminazione dell'agente.
      * Questo metodo viene invocato automaticamente quando l'agente viene rimosso (doDelete).
@@ -106,6 +106,7 @@ public class PlayerAgent extends Agent {
         killSubAgent(kittenDefenseAID);
         super.takeDown();
     }
+
     /**
      * Termina un sotto-agente specifico utilizzando il suo AID.
      * Recupera l'AgentController dal container locale e invoca il comando kill.
@@ -126,7 +127,6 @@ public class PlayerAgent extends Agent {
         }
     }
 
-    // --- COMPORTAMENTI ---
     /**
      * Comportamento che cerca il GameMaster nel Directory Facilitator (DF)
      * e avvia la procedura di registrazione (JOIN).
@@ -147,6 +147,7 @@ public class PlayerAgent extends Agent {
             addBehaviour(new WaitForConfirmBehaviour());
         }
     }
+
     /**
      * Invia un messaggio di richiesta JOIN al GameMaster specificando il numero di giocatori desiderati.
      */
@@ -157,6 +158,7 @@ public class PlayerAgent extends Agent {
         send(msg);
         System.out.println(nickname + " inviata richiesta JOIN (partita da " + requestedPlayers + ")");
     }
+
     /**
      * In attesa di una conferma o di un rifiuto da parte del GameMaster per l'ingresso nella partita.
      */
@@ -201,7 +203,6 @@ public class PlayerAgent extends Agent {
                     handleFailover(sender);
                     return;
                 }
-
                 if (sender.equals(gameMasterAID)) {
                     dispatchFromGameMaster(content);
                 } else if (sender.getLocalName().equals(handManagerAID.getLocalName())) {
@@ -213,6 +214,7 @@ public class PlayerAgent extends Agent {
                 block();
             }
         }
+
         /**
          * Gestisce la caduta del Master primario e l'attivazione del BackupMaster.
          * @param newMaster L'AID del nuovo agente Master.
@@ -229,7 +231,7 @@ public class PlayerAgent extends Agent {
             }
         }
 
-        //TODO Controllare, mi sa che ci siamo perse degli if con il refactor
+
         /**
          * Gestisce la logica di gioco proveniente dal GameMaster (turni, pescate, effetti carte).
          * @param content Il contenuto del messaggio ricevuto.
@@ -457,7 +459,6 @@ public class PlayerAgent extends Agent {
         }
     }
 
-    // --- UTILS ---
     /**
      * Ricerca il GameMaster primario all'interno del DF.
      * @return L'AID del GameMaster se trovato, null altrimenti.
