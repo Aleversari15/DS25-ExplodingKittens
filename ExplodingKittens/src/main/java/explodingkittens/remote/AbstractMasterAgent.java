@@ -36,10 +36,6 @@ public abstract class AbstractMasterAgent extends Agent {
     protected int expectedPlayers = -1;
     protected LobbyBehaviour lobbyBehaviour;
 
-    // =========================================================
-    // BEHAVIOURS CONDIVISI
-    // =========================================================
-
     /**
      * Behaviour condiviso per la gestione della lobby.
      * Attende JOIN e NICKNAME_AND_LOBBY_CHECK dai player.
@@ -130,6 +126,7 @@ public abstract class AbstractMasterAgent extends Agent {
      * Logica comune a GameMaster e BackupMaster.
      */
     protected void handleJoin(ACLMessage msg, String content) {
+        System.out.println("expectedPlayers: " + expectedPlayers);
         if (expectedPlayers == -1) {
             try {
                 String[] parts = content.split(":");
@@ -156,7 +153,9 @@ public abstract class AbstractMasterAgent extends Agent {
                 send(reply);
 
                 if (gameState.getActivePlayers().size() == expectedPlayers) {
-                    removeBehaviour(lobbyBehaviour);
+                    if (lobbyBehaviour != null) {
+                        removeBehaviour(lobbyBehaviour);
+                    }
                     setupAndStartGame();
                 }
             }
@@ -167,7 +166,8 @@ public abstract class AbstractMasterAgent extends Agent {
             send(reply);
         }
     }
-
+    //------------------------------------------------
+     //TODO: serve tenerlo qui?
     /**
      * chiamato ogni volta che un player si registra con successo.
      * Il GameMaster lo usa per sincronizzare il BackupMaster.
@@ -177,9 +177,6 @@ public abstract class AbstractMasterAgent extends Agent {
         // default: nessuna azione — sovrascrivibile dalle sottoclassi
     }
 
-    // =========================================================
-    // AVVIO PARTITA
-    // =========================================================
 
     /**
      * Inizializza e avvia la partita:
@@ -223,10 +220,6 @@ public abstract class AbstractMasterAgent extends Agent {
         });
     }
 
-    // =========================================================
-    // LOGICA DI GIOCO
-    // =========================================================
-
     /**
      * Processa i messaggi in arrivo smistandoli in messaggi che non dipendono dal turno
      * e azioni di gioco.
@@ -235,7 +228,6 @@ public abstract class AbstractMasterAgent extends Agent {
         if (msg == null || msg.getContent() == null) return false;
         String content = msg.getContent();
 
-        // Messaggi indipendenti dal turno — gestiti sempre
         if (content.equals(Messages.HEARTBEAT_CLIENT)) {
             handlePlayerHeartbeat(msg);
             return true;
@@ -257,7 +249,6 @@ public abstract class AbstractMasterAgent extends Agent {
             return true;
         }
 
-        // Da qui in poi serve gameState pronto
         if (gameState == null || gameState.getActivePlayers().isEmpty()) {
             System.out.println("[WARN] processGameMessage: gameState non ancora pronto, messaggio ignorato: " + content);
             return false;
@@ -511,10 +502,6 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
-    // =========================================================
-    // SERIALIZZAZIONE STATO
-    // =========================================================
-
     /**
      * Serializza lo stato corrente del gioco in una stringa.
      * Usato dal GameMaster per inviare heartbeat al BackupMaster.
@@ -608,10 +595,6 @@ public abstract class AbstractMasterAgent extends Agent {
             System.err.println("[" + getLocalName() + "] Errore ricostruzione stato: " + e.getMessage());
         }
     }
-
-    // =========================================================
-    // UTILITY
-    // =========================================================
 
     protected void broadcastToAll(String content) {
         for (Player p : gameState.getActivePlayers()) {
