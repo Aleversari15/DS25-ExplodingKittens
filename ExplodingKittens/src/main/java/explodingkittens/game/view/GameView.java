@@ -46,15 +46,6 @@ public class GameView {
     private JLabel    nicknameLabel;
     private JPanel    actionPanel;
     private boolean isPlayerTurn = false;
-    private static final Map<String, String> CARD_DESCRIPTIONS = Map.of(
-            "EXPLODING_KITTEN", "Esplodi! A meno che tu non abbia un Defuse.",
-            "DEFUSE",           "Neutralizza un Exploding Kitten.",
-            "SKIP",             "Termina il tuo turno senza pescare.",
-            "ATTACK",           "Termina il tuo turno e il prossimo giocatore deve fare 2 turni.",
-            "SHUFFLE",          "Mescola il mazzo.",
-            "SEE_THE_FUTURE",   "Guarda le prime 3 carte del mazzo.",
-            "CAT_CARD",         "Usala in coppia per rubare una carta a un avversario."
-    );
     private DefaultListModel<String> playersListModel;
     private JList<String> playersList;
     private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
@@ -64,6 +55,10 @@ public class GameView {
         SwingUtilities.invokeLater(this::buildUI);
     }
 
+    /**
+     * Carica le immagini delle carte dalle risorse del classpath
+     * e le memorizza nella mappa {@code cardImages}.
+     */
     private void loadCardImages() {
         Map<String, String> fileNames = getStringImageNameMap();
         for (Map.Entry<String, String> entry : fileNames.entrySet()) {
@@ -82,6 +77,10 @@ public class GameView {
         }
     }
 
+    /**
+     * Restituisce la mappa tra tipo carta e nome file immagine associato.
+     * @return mappa (tipo carta, nome file immagine)
+     */
     private static Map<String, String> getStringImageNameMap() {
         Map<String, String> fileNames = new HashMap<>();
         fileNames.put("EXPLODING_KITTEN",  "ExplodingKitten.jpg");
@@ -95,6 +94,10 @@ public class GameView {
         return fileNames;
     }
 
+    /**
+     * Restituisce la mappa tra tipo carta e descrizione testuale.
+     * @return mappa (tipo carta,descrizione)
+     */
     private static Map<String, String> getCardDescriptionsMap() {
         Map<String, String> cardDescriptions = new HashMap<>();
         cardDescriptions.put("DEFUSE",               "Neutralizza un Exploding Kitten.");
@@ -106,6 +109,9 @@ public class GameView {
         return cardDescriptions;
     }
 
+    /**
+     * Costruisce e inizializza l'interfaccia grafica principale.
+     */
     private void buildUI() {
         frame = new JFrame("Exploding Kittens");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -128,6 +134,10 @@ public class GameView {
         frame.setVisible(true);
     }
 
+    /**
+     * Crea la barra laterale con la lista dei giocatori ancora in partita.
+     * @return pannello sidebar giocatori
+     */
     private JPanel buildPlayersSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 10));
         sidebar.setBackground(BG_DARK);
@@ -158,6 +168,10 @@ public class GameView {
         return sidebar;
     }
 
+    /**
+     * Crea l'header della GUI con titolo, nickname e turno corrente.
+     * @return pannello header
+     */
     private JPanel buildHeader() {
         JPanel panel = new JPanel(new BorderLayout(16, 0));
         panel.setBackground(BG_PANEL);
@@ -186,6 +200,10 @@ public class GameView {
         return panel;
     }
 
+    /**
+     * Crea il pannello centrale contenente il log di gioco.
+     * @return pannello log
+     */
     private JPanel buildLogPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setBackground(BG_DARK);
@@ -213,6 +231,10 @@ public class GameView {
         return panel;
     }
 
+    /**
+     * Crea il pannello inferiore con la mano del giocatore e i pulsanti azione.
+     * @return pannello inferiore
+     */
     private JPanel buildBottomPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(BG_DARK);
@@ -251,6 +273,10 @@ public class GameView {
         return panel;
     }
 
+    /**
+     * Crea un bottone personalizzato per l'azione "PESCA".
+     * @return bottone configurato
+     */
     private JButton buildButton() {
         JButton btn = new JButton("PESCA") {
             @Override
@@ -279,6 +305,11 @@ public class GameView {
         return btn;
     }
 
+    /**
+     * Costruisce il pannello grafico di una singola carta.
+     * @param cardType tipo della carta
+     * @return pannello rappresentante la carta
+     */
     private JPanel buildCardPanel(String cardType) {
         Color accent = cardAccent(cardType);
         Image img    = cardImages.get(cardType.trim());
@@ -307,7 +338,7 @@ public class GameView {
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         //Mouse listener per mostrare tooltip con descrizione quando si fa hover su carta
-        String description = CARD_DESCRIPTIONS.getOrDefault(cardType.trim(), "Carta sconosciuta.");
+        String description = getCardDescriptionsMap().getOrDefault(cardType.trim(), "Carta sconosciuta.");
         card.addMouseListener(new MouseAdapter() {
             private Popup tooltip;
 
@@ -363,6 +394,11 @@ public class GameView {
         return card;
     }
 
+    /**
+     * Gestisce il click su una carta in base al suo tipo,
+     * inviando il comando corretto alla coda di input.
+     * @param cardType tipo della carta cliccata
+     */
     private void handleCardClick(String cardType) {
         String type = cardType.trim();
         switch (type) {
@@ -376,6 +412,10 @@ public class GameView {
         }
     }
 
+    /**
+     * Mostra una finestra per scegliere il giocatore target
+     * quando viene utilizzata una Cat Card.
+     */
     private void askCatCardTarget() {
         java.util.List<String> validPlayers = new java.util.ArrayList<>();
         String myName = nicknameLabel.getText().replace("Giocatore: ", "").trim();
@@ -407,15 +447,28 @@ public class GameView {
         }
     }
 
+    /**
+     * Abilita e disabilita i componenti all'interno dell'action panel.
+     * @param enabled se true, attiva i componenti.
+     */
     private void setActionsEnabled(boolean enabled) {
         for (Component c : actionPanel.getComponents()) c.setEnabled(enabled);
     }
 
+    /**
+     * Aggiunge una riga al log di gioco e aggiorna lo scroll.
+     * @param text testo da aggiungere
+     */
     private void appendLog(String text) {
         logArea.append(text + "\n");
         logArea.setCaretPosition(logArea.getDocument().getLength());
     }
 
+    /**
+     * Restituisce il nome leggibile della carta a partire dal tipo.
+     * @param cardType tipo della carta
+     * @return nome formattato
+     */
     private String cardName(String cardType) {
         return switch (cardType.trim()) {
             case "EXPLODING_KITTEN" -> "Exploding Kitten";
@@ -429,6 +482,11 @@ public class GameView {
         };
     }
 
+    /**
+     * Restituisce il colore associato al tipo di carta.
+     * @param cardType tipo della carta
+     * @return colore accent
+     */
     private Color cardAccent(String cardType) {
         return switch (cardType.trim()) {
             case "EXPLODING_KITTEN" -> ACCENT_RED;
@@ -571,7 +629,7 @@ public class GameView {
             }
             handPanel.revalidate();
             handPanel.repaint();
-            setActionsEnabled(isPlayerTurn); //testare
+            setActionsEnabled(isPlayerTurn);
         });
     }
 
@@ -638,7 +696,6 @@ public class GameView {
                 appendLog("[Defuse] Hai usato il Defuse. Sei salvo!"));
     }
 
-
     /**
      * Mostra popup di eliminazione dopo che è stato pescato un Exploding Kitten e il giocatore non aveva carte Defuse.
      */
@@ -699,10 +756,19 @@ public class GameView {
         SwingUtilities.invokeLater(() -> appendLog("Errore: Non e' il tuo turno!"));
     }
 
+    /**
+     * Mostra un messaggio quando il giocatore non ha abbastanza Cat Card
+     * per effettuare l'azione (servono almeno due carte).
+     */
     public void showTwoCatNotInHand() {
         SwingUtilities.invokeLater(() -> appendLog("Non puoi giocare la cat card, devi averne almeno due in mano!"));
     }
 
+    /**
+     * Notifica che un giocatore ha utilizzato un Defuse per salvarsi
+     * e lo rimuove dalla lista dei giocatori attivi.
+     * @param nickname nome del giocatore
+     */
     public void showDefuseUsedByPlayer(String nickname) {
         SwingUtilities.invokeLater(() -> {
             appendLog( "[DEFUSED]"+ nickname+ " ha usato un Defuse per salvarsi!");
@@ -717,10 +783,10 @@ public class GameView {
         SwingUtilities.invokeLater(() -> appendLog("Shuffle: Il mazzo e' stato mischiato."));
     }
 
-    //TODO controllare
     /**
-     *
-     * @return
+     * Attende un'azione da parte dell'utente (es. pesca o gioco carta).
+     * Il metodo è bloccante finché non arriva un input.
+     * @return stringa rappresentante l'azione scelta
      */
     public String askAction() {
         SwingUtilities.invokeLater(() -> setActionsEnabled(isPlayerTurn));
@@ -835,6 +901,5 @@ public class GameView {
             }
         }
     }
-
 
 }

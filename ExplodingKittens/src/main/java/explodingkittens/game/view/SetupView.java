@@ -25,6 +25,9 @@ public class SetupView {
         buildUI();
     }
 
+    /**
+     * Costruisce e inizializza l'interfaccia grafica della schermata di setup.
+     */
     private void buildUI() {
         frame = new JFrame("Exploding Kittens - Setup");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -89,6 +92,10 @@ public class SetupView {
         frame.setVisible(true);
     }
 
+    /**
+     * Applica uno stile grafico personalizzato a un campo di testo.
+     * @param field campo di testo da stilizzare
+     */
     private void styleTextField(JTextField field) {
         field.setBackground(BG_PANEL);
         field.setForeground(Color.WHITE);
@@ -99,12 +106,20 @@ public class SetupView {
         field.setFont(new Font("SansSerif", Font.PLAIN, 16));
     }
 
+    /**
+     * Applica uno stile grafico personalizzato a uno spinner numerico.
+     * @param spinner spinner da stilizzare
+     */
     private void styleSpinner(JSpinner spinner) {
         spinner.getEditor().getComponent(0).setBackground(BG_PANEL);
         spinner.getEditor().getComponent(0).setForeground(Color.WHITE);
         spinner.setBorder(BorderFactory.createLineBorder(ACCENT_ORANGE, 1));
     }
 
+    /**
+     * Applica uno stile grafico personalizzato a un bottone.
+     * @param btn bottone da stilizzare
+     */
     private void styleButton(JButton btn) {
         btn.setFont(new Font("Georgia", Font.BOLD, 16));
         btn.setForeground(Color.WHITE);
@@ -115,8 +130,9 @@ public class SetupView {
     }
 
     /**
-     *
-     * @param isHost
+     * Imposta se il giocatore corrente è host della lobby.
+     * Se è host, può scegliere il numero di giocatori.
+     * @param isHost true se il giocatore è host, false altrimenti
      */
     public void setAsHost(boolean isHost) {
         SwingUtilities.invokeLater(() -> {
@@ -135,27 +151,27 @@ public class SetupView {
     public String getPlayerName() { return nameField.getText().trim(); }
 
     /**
-     *
-     * @return
+     * Restituisce il numero di giocatori selezionato nello spinner.
+     * @return numero di giocatori scelto
      */
     public int getPlayerCount() {
         return (int) playerSpinner.getValue() ;
     }
 
     /**
-     *
-     * @param al
+     * Aggiunge un listener al bottone di conferma.
+     * @param al ActionListener da associare al bottone
      */
     public void addStartListener(java.awt.event.ActionListener al) { startButton.addActionListener(al); }
 
     /**
-     *
+     * Chiude la finestra di setup.
      */
     public void close() { frame.dispose(); }
 
     /**
      * Metodo utilizzato per informare l'utente di eventuali errori in fase di
-     * registrazione alla partita (es. nickname invalido)
+     * registrazione alla partita (es. nickname già in uso)
      * @param message
      */
     public void showNicknameError(String message) {
@@ -194,7 +210,7 @@ public class SetupView {
     }
 
     /**
-     *
+     * Rimuove tutti gli ActionListener associati al bottone di conferma.
      */
     public void removeListeners() {
         for (java.awt.event.ActionListener al : startButton.getActionListeners()) {
