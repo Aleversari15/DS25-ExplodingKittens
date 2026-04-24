@@ -24,7 +24,7 @@ public class BackupServerMain {
             );
 
             backupMaster.start();
-            System.out.println("--- Backup Server avviato e pronto al subentro ---");
+            System.out.println("Backup Server avviato e pronto al subentro!");
 
         } catch (Exception e) {
             e.printStackTrace();
