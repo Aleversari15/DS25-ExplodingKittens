@@ -11,7 +11,6 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -148,7 +147,7 @@ public class FaultTolleranceTest {
      * 3. Attesa del periodo di promozione.
      * 4. Un nuovo player tenta il JOIN puntando direttamente al BackupMaster.
      * 5. Verifica che il BackupMaster risponda positivamente.
-     * * @throws Exception se si verificano errori nella creazione degli agenti.
+     * @throws Exception se si verificano errori nella creazione degli agenti.
      */
     @Test
     public void testJoinAfterFailover() throws Exception {
@@ -220,6 +219,18 @@ public class FaultTolleranceTest {
 
     }
 
+    /**
+     * Verifica che il GameMasterAgent invii heartbeat periodici al BackupMasterAgent
+     *  e che questi contengano lo stato serializzato della partita.
+     *  Flusso del test:
+     *   1. Avvio del GameMaster.
+     *   2. L'Agente di test, che simula il BackupMasterAgent si registra nel DF come "backup-master".
+     *   3. Verifica che almeno un heartbeat venga ricevuto con performativa INFORM
+     *      e contenuto che inizia con Messages.HEARTBEAT.
+     *   4. Verifica che il GameMaster invii heartbeat periodicamente (secondo heartbeat).
+     *   5. Verifica che il payload dell'heartbeat non sia vuoto.
+     * @throws Exception
+     */
     @Test
     public void testHeartbeatExchange() throws Exception {
         AgentController gameMaster = container.createNewAgent("GameMaster", "explodingkittens.remote.GameMasterAgent", new Object[]{"2"});

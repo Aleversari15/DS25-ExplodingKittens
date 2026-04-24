@@ -1,4 +1,4 @@
-package explodingkittens;
+package explodingkittens.remote;
 
 import jade.core.Profile;
 import jade.core.ProfileImpl;

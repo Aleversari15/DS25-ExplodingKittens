@@ -7,8 +7,12 @@ import jade.core.behaviours.OneShotBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-import java.util.Scanner;
 
+/**
+ * Agente responsabile della gestione della difesa quando un giocatore pesca un Exploding Kitten.
+ * La sua responsabilità principale è verificare il possesso di un Defuse, utilizzarlo se presente, o gestire l'eliminazione
+ * del giocatore se assente.
+ */
 public class KittenDefenseAgent extends Agent {
 
     private AID playerAgentAID;
@@ -24,8 +28,10 @@ public class KittenDefenseAgent extends Agent {
         System.out.println("KittenDefenseAgent avviato.");
         addBehaviour(new ListenForKittenBehaviour());
     }
-
-    //Aspetta segnale da PlayerAgent
+    /**
+     * Comportamento che resta in ascolto del segnale KITTEN_DRAWN dal PlayerAgent.
+     * Quando viene pescato un exploding kitten, avvia la procedura di verifica del Defuse interpellando l'HandManager.
+     */
     private class ListenForKittenBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
@@ -42,7 +48,6 @@ public class KittenDefenseAgent extends Agent {
                     currentDeckSize = content.split(":")[1];
                 }
 
-                // Chiede all'HandManager se c'è un Defuse disponibile
                 ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
                 ask.addReceiver(handManagerAID);
                 ask.setContent(Messages.HAS_DEFUSE_ASK);
@@ -54,8 +59,10 @@ public class KittenDefenseAgent extends Agent {
             }
         }
     }
-
-    // Aspetta risposta da HandManager
+    /**
+     * Comportamento che attende la risposta dall'HandManager riguardo la presenza di un Defuse.
+     * Gestisce i due scenari possibili: uso del Defuse o eliminazione del giocatore.
+     */
     private class WaitForDefuseCheckBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
@@ -87,8 +94,11 @@ public class KittenDefenseAgent extends Agent {
             }
         }
     }
-
-    // Usa il Defuse e chiede la posizione al PlayerAgent
+    /**
+     * Comportamento che esegue l'azione di utilizzare una carta Defuse.
+     * Ordina all'HandManager di rimuovere la carta, aggiorna l'interfaccia del giocatore
+     * e richiede la posizione dove reinserire l'Exploding Kitten nel mazzo.
+     */
     private class UseDefuseBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
@@ -97,27 +107,27 @@ public class KittenDefenseAgent extends Agent {
             useDefuse.setContent(Messages.USE_DEFUSE);
             send(useDefuse);
 
-            //Refresh delle carte in mano al player
             ACLMessage refresh = new ACLMessage(ACLMessage.INFORM);
             refresh.addReceiver(playerAgentAID);
             refresh.setContent(Messages.REFRESH_HAND_AFTER_DEFUSE);
             send(refresh);
 
-            // Chiede al PlayerAgent di raccogliere la posizione dall'utente
             ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
             ask.addReceiver(playerAgentAID);
             ask.setContent(Messages.ASK_DEFUSE_POSITION + currentDeckSize);
             send(ask);
 
-            // Aspetta la risposta con la posizione
-            addBehaviour(new WaitForDefusePositionBehaviour());
+            addBehaviour(new WaitForExplodingPositionBehaviour());
         }
     }
-
-    // Aspetta la posizione dal PlayerAgent e la inoltra al GameMaster
-    private class WaitForDefusePositionBehaviour extends CyclicBehaviour {
+    /**
+     * Comportamento che attende la scelta della posizione del exploding kitten da parte del giocatore.
+     * Una volta ricevuta la posizione, invia il comando finale per rimetterlo nel mazzo.
+     */
+    private class WaitForExplodingPositionBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
+
             MessageTemplate mt = MessageTemplate.and(
                     MessageTemplate.MatchPerformative(ACLMessage.INFORM),
                     MessageTemplate.MatchSender(playerAgentAID)
@@ -126,7 +136,6 @@ public class KittenDefenseAgent extends Agent {
 
             if (msg != null) {
                 if (msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
-                    // Inoltra la mossa al PlayerAgent
                     ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
                     defuse.addReceiver(playerAgentAID);
                     defuse.setContent(msg.getContent());

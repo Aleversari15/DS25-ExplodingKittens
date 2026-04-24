@@ -1,6 +1,5 @@
-package explodingkittens;
+package explodingkittens.remote;
 
-import explodingkittens.remote.Messages;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -27,6 +26,7 @@ public class TestPlayerAgent extends Agent {
     private volatile boolean winnerReceived        = false;
     private volatile boolean disconnectedNotified  = false;
     private volatile boolean gameStarted           = false;
+    private volatile boolean joinConfirmed         = false;
 
     public static TestPlayerAgent getInstance(String localName) {
         return REGISTRY.get(localName);
@@ -111,6 +111,10 @@ public class TestPlayerAgent extends Agent {
                     if (content.startsWith(Messages.PLAYER_DISCONNECTED)) {
                         disconnectedNotified = true;
                     }
+                    if (content.equals(Messages.JOINED)) {
+                        joinConfirmed = true;
+                        System.out.println("[TestPlayerAgent] " + getLocalName() + " JOIN confermato!");
+                    }
                 } else {
                     block();
                 }
@@ -137,6 +141,8 @@ public class TestPlayerAgent extends Agent {
      * True se la partita è iniziata (HAND_INIT ricevuto).
      * */
     public boolean isGameStarted() { return gameStarted; }
+
+    public boolean isJoinConfirmed() { return joinConfirmed; }
 
 
     private AID findGameMaster() {
