@@ -329,6 +329,9 @@ public class PlayerAgent extends Agent {
                 case Messages.PLAYER_DISCONNECTED:
                     view.showPlayerDisconnected(parts[1]);
                     break;
+                case Messages.SHOW_DEFUSE_USED:
+                    view.showDefuseUsedByPlayer(parts[1]);
+                    break;
                 default:
                     view.showError(content);
                     break;

@@ -306,7 +306,7 @@ public abstract class AbstractMasterAgent extends Agent {
         reply.setPerformative(ACLMessage.CONFIRM);
         reply.setContent(Messages.DEFUSED);
         send(reply);
-        broadcastToAll(msg.getSender().getLocalName() + " ha neutralizzato l'Exploding Kitten!");
+        broadcastToAll(Messages.SHOW_DEFUSE_USED+msg.getSender().getLocalName() );
         gameState.nextTurn();
         nextTurn();
     }

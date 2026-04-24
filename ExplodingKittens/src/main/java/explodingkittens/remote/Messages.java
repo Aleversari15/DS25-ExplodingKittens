@@ -49,7 +49,7 @@ public final class Messages {
 
 
     // Messaggi  da KittenDefenseAgent a PlayerAgent per la UI
-    public static final String SHOW_DEFUSE_USED      = "SHOW_DEFUSE_USED";
+    public static final String SHOW_DEFUSE_USED      = "SHOW_DEFUSE_USED:";
     public static final String SHOW_ELIMINATED       = "SHOW_ELIMINATED";
     public static final String ASK_DEFUSE_POSITION   = "ASK_DEFUSE_POSITION:";
 
