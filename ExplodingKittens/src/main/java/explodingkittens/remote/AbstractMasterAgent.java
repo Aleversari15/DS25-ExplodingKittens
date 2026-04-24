@@ -3,27 +3,229 @@ package explodingkittens.remote;
 import explodingkittens.game.model.*;
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Classe base che contiene tutta la logica di gioco condivisa
  * tra GameMasterAgent e BackupMasterAgent.
- * Gestisce azioni delle carte, Cat Card, eliminazioni, turni,
- * serializzazione stato, broadcast ai giocatori.
- * Le sottoclassi implementano solo la logica specifica del loro ruolo
- * (setup, heartbeat, promozione, lobby).
+ * Gestisce:
+ * - Lobby (JOIN, NICKNAME_AND_LOBBY_CHECK)
+ * - Avvio partita
+ * - Azioni di gioco (carte, turni, eliminazioni)
+ * - Serializzazione/deserializzazione stato
+ * - Heartbeat client e disconnessioni
+ * - Behaviour di ascolto messaggi (LobbyBehaviour, HandleActionBehaviour)
+ * Le sottoclassi implementano solo setup(), registrazione DF,
+ * e la logica specifica del loro ruolo (heartbeat verso backup, promozione).
  */
 public abstract class AbstractMasterAgent extends Agent {
+
     protected GameState gameState;
-    protected Deck      deck;
-    protected ACLMessage pendingAction    = null;
-    protected String     pendingCatTarget = null;
+    protected Deck deck;
+    protected ACLMessage pendingAction = null;
+    protected String pendingCatTarget = null;
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
     protected static final long PLAYER_TIMEOUT = 10000;
     protected boolean gameStarted = false;
     protected int expectedPlayers = -1;
+    protected LobbyBehaviour lobbyBehaviour;
+
+    // =========================================================
+    // BEHAVIOURS CONDIVISI
+    // =========================================================
+
+    /**
+     * Behaviour condiviso per la gestione della lobby.
+     * Attende JOIN e NICKNAME_AND_LOBBY_CHECK dai player.
+     * Quando la lobby è piena, avvia StartGameBehaviour.
+     */
+    protected class LobbyBehaviour extends CyclicBehaviour {
+        @Override
+        public void action() {
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+            ACLMessage msg = myAgent.receive(mt);
+
+            if (msg == null) { block(); return; }
+
+            String content = msg.getContent();
+            if (content == null) return;
+
+            if (content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
+                handleNicknameCheck(msg, content);
+                return;
+            }
+
+            if (content.startsWith(Messages.JOIN)) {
+                handleJoin(msg, content);
+            }
+        }
+    }
+
+    /**
+     * Behaviour condiviso per la gestione della logica di gioco.
+     * Attivo dopo l'avvio della partita.
+     */
+    protected class HandleActionBehaviour extends CyclicBehaviour {
+        @Override
+        public void action() {
+            ACLMessage msg = myAgent.receive();
+            if (msg == null) { block(); return; }
+
+            // Ignora messaggi di sistema JADE
+            String senderLocal = msg.getSender().getLocalName();
+            if (senderLocal.equals("ams") || senderLocal.equals("df")) return;
+
+            String content = msg.getContent();
+            if (content == null) return;
+
+            if (content.startsWith(Messages.JOIN) ||
+                    content.startsWith(Messages.NICKNAME_AND_LOBBY_CHECK)) {
+                ACLMessage reply = msg.createReply();
+                reply.setPerformative(ACLMessage.REFUSE);
+                reply.setContent(Messages.LOBBY_FULL);
+                send(reply);
+                return;
+            }
+
+            processGameMessage(msg);
+        }
+    }
+
+    // =========================================================
+    // GESTIONE LOBBY
+    // =========================================================
+
+    /**
+     * Gestisce la verifica del nickname e disponibilità della lobby.
+     * Logica comune a GameMaster e BackupMaster.
+     */
+    protected void handleNicknameCheck(ACLMessage msg, String content) {
+        String requestedNick = content.substring(Messages.NICKNAME_AND_LOBBY_CHECK.length()).trim();
+
+        boolean alreadyUsed = gameState.getActivePlayers().stream()
+                .anyMatch(p -> p.getNickname().equalsIgnoreCase(requestedNick));
+
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
+
+        if (alreadyUsed) {
+            reply.setContent(Messages.INVALID_NICKNAME);
+        } else if (expectedPlayers != -1 &&
+                gameState.getActivePlayers().size() >= expectedPlayers) {
+            reply.setContent(Messages.LOBBY_FULL);
+        } else {
+            reply.setContent(expectedPlayers <= 0 ? Messages.VALID_HOST : Messages.VALID_GUEST);
+        }
+        send(reply);
+    }
+
+    /**
+     * Gestisce la richiesta di JOIN di un player.
+     * Logica comune a GameMaster e BackupMaster.
+     */
+    protected void handleJoin(ACLMessage msg, String content) {
+        if (expectedPlayers == -1) {
+            try {
+                String[] parts = content.split(":");
+                expectedPlayers = parts.length > 1 ? Integer.parseInt(parts[1]) : 2;
+                System.out.println("[" + getLocalName() + "] Lobby creata con limite: " + expectedPlayers);
+            } catch (NumberFormatException e) {
+                expectedPlayers = 2;
+            }
+        }
+
+        if (gameState.getActivePlayers().size() < expectedPlayers) {
+            String playerName = msg.getSender().getName();
+            if (findPlayerByAgentName(playerName) == null) {
+                Player player = new Player(playerName, msg.getSender().getLocalName());
+                gameState.addPlayer(player);
+                onPlayerJoined(); // hook per sottoclassi (es. sincronizza con backup)
+
+                System.out.println("[" + getLocalName() + "] Registrato: " + playerName
+                        + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
+
+                ACLMessage reply = msg.createReply();
+                reply.setPerformative(ACLMessage.CONFIRM);
+                reply.setContent(Messages.JOINED);
+                send(reply);
+
+                if (gameState.getActivePlayers().size() == expectedPlayers) {
+                    removeBehaviour(lobbyBehaviour);
+                    setupAndStartGame();
+                }
+            }
+        } else {
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.REFUSE);
+            reply.setContent(Messages.LOBBY_FULL);
+            send(reply);
+        }
+    }
+
+    /**
+     * chiamato ogni volta che un player si registra con successo.
+     * Il GameMaster lo usa per sincronizzare il BackupMaster.
+     * Il BackupMaster non fa nulla di extra.
+     */
+    protected void onPlayerJoined() {
+        // default: nessuna azione — sovrascrivibile dalle sottoclassi
+    }
+
+    // =========================================================
+    // AVVIO PARTITA
+    // =========================================================
+
+    /**
+     * Inizializza e avvia la partita:
+     * - costruisce il mazzo
+     * - distribuisce le carte iniziali
+     * - inserisce gli Exploding Kittens
+     * - notifica i giocatori
+     * - avvia HandleActionBehaviour e il checker di disconnessioni
+     */
+    protected void setupAndStartGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+
+        deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
+        Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
+        DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
+
+        for (Player player : gameState.getActivePlayers()) {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.addReceiver(new AID(player.getAgentName(), true));
+            msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
+            send(msg);
+        }
+
+        System.out.println("[" + getLocalName() + "] Partita avviata!");
+        broadcastPlayersList();
+        nextTurn();
+        addBehaviour(new HandleActionBehaviour());
+        startPlayerTimeoutChecker();
+    }
+
+    /**
+     * Avvia il behaviour periodico per rilevare player disconnessi.
+     */
+    protected void startPlayerTimeoutChecker() {
+        addBehaviour(new TickerBehaviour(this, 2000) {
+            @Override
+            protected void onTick() {
+                checkDisconnectedPlayers();
+            }
+        });
+    }
+
+    // =========================================================
+    // LOGICA DI GIOCO
+    // =========================================================
 
     /**
      * Processa i messaggi in arrivo smistandoli in messaggi che non dipendono dal turno
@@ -32,21 +234,17 @@ public abstract class AbstractMasterAgent extends Agent {
     protected boolean processGameMessage(ACLMessage msg) {
         if (msg == null || msg.getContent() == null) return false;
         String content = msg.getContent();
-        Player current = gameState.getCurrentPlayer();
-        if (current == null) return false;
 
+        // Messaggi indipendenti dal turno — gestiti sempre
         if (content.equals(Messages.HEARTBEAT_CLIENT)) {
             handlePlayerHeartbeat(msg);
             return true;
-        }
-        if (content.equals(Messages.HAND_INIT)){
-            gameStarted= true;
         }
         if (content.startsWith(Messages.HAND_RESPONSE)) {
             String serializedHand = content.substring(Messages.HAND_RESPONSE.length());
             if (pendingCatTarget != null && pendingAction != null) {
                 processCatCardWithTargetHand(pendingAction, serializedHand);
-                pendingAction    = null;
+                pendingAction = null;
                 pendingCatTarget = null;
             } else if (pendingAction != null) {
                 processActionWithHand(pendingAction, serializedHand);
@@ -54,10 +252,20 @@ public abstract class AbstractMasterAgent extends Agent {
             }
             return true;
         }
-        if (content.equals(Messages.PLAYER_ELIMINATED)) { //gestito indipendentemente dal turno
+        if (content.equals(Messages.PLAYER_ELIMINATED)) {
             handleElimination(msg);
             return true;
         }
+
+        // Da qui in poi serve gameState pronto
+        if (gameState == null || gameState.getActivePlayers().isEmpty()) {
+            System.out.println("[WARN] processGameMessage: gameState non ancora pronto, messaggio ignorato: " + content);
+            return false;
+        }
+
+        Player current = gameState.getCurrentPlayer();
+        if (current == null) return false;
+
         if (!msg.getSender().getName().equals(current.getAgentName())) {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.DISCONFIRM);
@@ -65,9 +273,11 @@ public abstract class AbstractMasterAgent extends Agent {
             send(reply);
             return true;
         }
+
         if (content.equals(Messages.DRAW)) {
             handleDraw(msg);
-        } else if (content.startsWith(Messages.PLAY) || content.startsWith(Messages.CAT_CARD_PLAY)) {
+        } else if (content.startsWith(Messages.PLAY) ||
+                content.startsWith(Messages.CAT_CARD_PLAY)) {
             pendingAction = msg;
             ACLMessage query = new ACLMessage(ACLMessage.REQUEST);
             query.addReceiver(msg.getSender());
@@ -81,39 +291,6 @@ public abstract class AbstractMasterAgent extends Agent {
         return true;
     }
 
-    /**
-     * Inizializza e avvia la partita:
-     * - costruisce il mazzo
-     * - distribuisce le carte iniziali
-     * - inserisce gli Exploding Kittens
-     * - notifica i giocatori
-     */
-    protected void setupAndStartGame() {
-        if (gameStarted) return; //TODO Serve ancora?
-        this.gameStarted = true;
-        if (deck == null || deck.size() == 0) {
-            deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
-            Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
-            DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
-
-            for (Player player : gameState.getActivePlayers()) {
-                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.addReceiver(new AID(player.getAgentName(), true));
-                msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
-                send(msg);
-            }
-        }
-
-        System.out.println("Partita avviata da " + getLocalName());
-        broadcastPlayersList();
-        nextTurn();
-    }
-
-    /**
-     * Processa un'azione del giocatore utilizzando la sua mano aggiornata.
-     * @param originalMsg messaggio originale del giocatore
-     * @param serializedHand mano del giocatore serializzata
-     */
     private void processActionWithHand(ACLMessage originalMsg, String serializedHand) {
         String content = originalMsg.getContent();
 
@@ -126,10 +303,9 @@ public abstract class AbstractMasterAgent extends Agent {
             CardType type = CardType.valueOf(content.substring(Messages.PLAY.length()));
 
             if (!hand.contains(type)) {
-                sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND); //TODO Serve ancora??
+                sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND);
                 return;
             }
-
             notifyRemoveCard(originalMsg.getSender(), type.name());
 
             switch (type) {
@@ -141,7 +317,8 @@ public abstract class AbstractMasterAgent extends Agent {
             }
 
         } else if (content.startsWith(Messages.CAT_CARD_PLAY)) {
-            long catCount = hand.stream().filter(t -> t == CardType.CAT_CARD).count();
+            long catCount = hand.stream()
+                    .filter(t -> t == CardType.CAT_CARD).count();
             if (catCount < 2) {
                 sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND);
                 return;
@@ -150,14 +327,6 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
-    /**
-     * Prepara l'esecuzione della Cat Card:
-     * - valida il target
-     * - salva lo stato pending
-     * - richiede la mano del target
-     *
-     * @param originalMsg messaggio originale del giocatore
-     */
     private void prepareCatCard(ACLMessage originalMsg) {
         String[] parts = originalMsg.getContent().split(":");
         if (parts.length < 2) {
@@ -176,7 +345,7 @@ public abstract class AbstractMasterAgent extends Agent {
             return;
         }
 
-        pendingAction    = originalMsg;
+        pendingAction = originalMsg;
         pendingCatTarget = target.getAgentName();
 
         ACLMessage query = new ACLMessage(ACLMessage.REQUEST);
@@ -185,14 +354,8 @@ public abstract class AbstractMasterAgent extends Agent {
         send(query);
     }
 
-    /**
-     * Completa l'azione Cat Card una volta ricevuta la mano del target:
-     * - seleziona una carta casuale
-     * - la trasferisce al giocatore attivo
-     * @param originalMsg messaggio del giocatore che ha giocato la carta
-     * @param serializedTargetHand mano del bersaglio
-     */
-    private void processCatCardWithTargetHand(ACLMessage originalMsg, String serializedTargetHand) {
+    private void processCatCardWithTargetHand(ACLMessage originalMsg,
+                                              String serializedTargetHand) {
         List<String> targetCards = Arrays.stream(serializedTargetHand.split(","))
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
@@ -231,17 +394,13 @@ public abstract class AbstractMasterAgent extends Agent {
         notifyRefresh(new AID(pendingCatTarget, true));
     }
 
-    /**
-     * Gestisce l'azione di pesca di una carta dal mazzo.
-     * @param msg messaggio del giocatore
-     */
     protected void handleDraw(ACLMessage msg) {
         Card drawn = deck.removeTopCard();
 
         if (drawn.getType() == CardType.EXPLODING_KITTEN) {
             ACLMessage reply = msg.createReply();
             reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent(Messages.DREW_KITTEN + ":"+ deck.size());
+            reply.setContent(Messages.DREW_KITTEN + ":" + deck.size());
             send(reply);
         } else {
             ACLMessage addCard = new ACLMessage(ACLMessage.INFORM);
@@ -260,9 +419,6 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
-    /**
-     * Gestisce l'azione SKIP.
-     */
     protected void handleSkip(ACLMessage msg) {
         notifyRefresh(msg.getSender());
         ACLMessage reply = msg.createReply();
@@ -273,9 +429,6 @@ public abstract class AbstractMasterAgent extends Agent {
         nextTurn();
     }
 
-    /**
-     * Gestisce l'azione ATTACK (il prossimo giocatore gioca due turni).
-     */
     protected void handleAttack(ACLMessage msg) {
         notifyRefresh(msg.getSender());
         ACLMessage reply = msg.createReply();
@@ -284,16 +437,12 @@ public abstract class AbstractMasterAgent extends Agent {
         send(reply);
 
         Player current = gameState.getCurrentPlayer();
-        do {
-            gameState.nextTurn();
-        } while (current == gameState.getCurrentPlayer());
+        do { gameState.nextTurn(); }
+        while (current == gameState.getCurrentPlayer());
         gameState.setTurnsToPlay(2);
         nextTurn();
     }
 
-    /**
-     * Mescola il mazzo.
-     */
     protected void handleShuffle(ACLMessage msg) {
         List<Card> cards = deck.getCards();
         Collections.shuffle(cards);
@@ -305,9 +454,6 @@ public abstract class AbstractMasterAgent extends Agent {
         send(reply);
     }
 
-    /**
-     * Mostra le prime 3 carte del mazzo al giocatore.
-     */
     protected void handleSeeTheFuture(ACLMessage msg) {
         int count = Math.min(3, deck.size());
         List<Card> cardsToShow = deck.peekTop(count);
@@ -320,10 +466,6 @@ public abstract class AbstractMasterAgent extends Agent {
         send(reply);
     }
 
-    /**
-     * Gestisce l'utilizzo della carta Defuse.
-     * Reinserisce l'Exploding Kitten nel mazzo.
-     */
     protected void handleDefuse(ACLMessage msg) {
         String[] parts = msg.getContent().split(":");
         int position = Math.min(Integer.parseInt(parts[1]), deck.size());
@@ -336,17 +478,11 @@ public abstract class AbstractMasterAgent extends Agent {
         reply.setPerformative(ACLMessage.CONFIRM);
         reply.setContent(Messages.DEFUSED);
         send(reply);
-        broadcastToAll(Messages.SHOW_DEFUSE_USED+msg.getSender().getLocalName() );
+        broadcastToAll(Messages.SHOW_DEFUSE_USED + msg.getSender().getLocalName());
         gameState.nextTurn();
         nextTurn();
     }
 
-    /**
-     * Gestisce l'eliminazione di un giocatore:
-     * - rimozione dallo stato di gioco
-     * - aggiornamento lista player
-     * - verifica fine partita
-     */
     protected void handleElimination(ACLMessage msg) {
         Player eliminated = findPlayerByAgentName(msg.getSender().getName());
         if (eliminated != null) {
@@ -355,15 +491,10 @@ public abstract class AbstractMasterAgent extends Agent {
             broadcastPlayersList();
             System.out.println(eliminated.getNickname() + " eliminato.");
         }
-
-        if (gameState.isGameOver()) { announceWinner();}
-        else { nextTurn(); }
+        if (gameState.isGameOver()) announceWinner();
+        else nextTurn();
     }
 
-    /**
-     * Notifica tutti i giocatori del turno corrente.
-     * Chiamato dopo ogni azione che termina il turno.
-     */
     protected void nextTurn() {
         if (gameState.isGameOver()) {
             announceWinner();
@@ -380,11 +511,13 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
+    // =========================================================
+    // SERIALIZZAZIONE STATO
+    // =========================================================
 
     /**
-     * Metodo per la serializzazione dello stato del gioco.
-     * Utilizzato per aggiornare il BackupMasterAgent sullo stato del gioco.
-     * @return stato del gioco sotto forma di stringa.
+     * Serializza lo stato corrente del gioco in una stringa.
+     * Usato dal GameMaster per inviare heartbeat al BackupMaster.
      */
     protected String serializeState() {
         StringBuilder sb = new StringBuilder();
@@ -394,7 +527,9 @@ public abstract class AbstractMasterAgent extends Agent {
         sb.append(expectedPlayers).append("*");
 
         String deckState = (deck != null && !deck.getCards().isEmpty())
-                ? deck.getCards().stream().map(c -> c.getType().name()).collect(Collectors.joining(","))
+                ? deck.getCards().stream()
+                .map(c -> c.getType().name())
+                .collect(Collectors.joining(","))
                 : "WAITING_FOR_PLAYERS";
         sb.append(deckState).append("*");
 
@@ -403,14 +538,9 @@ public abstract class AbstractMasterAgent extends Agent {
                 .collect(Collectors.joining("|"));
         sb.append(playersState);
 
-        for(Player p : gameState.getActivePlayers()){
-            System.out.println("SERIALIZE PLAYER: " + p.getAgentName() + "," + p.getNickname());
-        }
-
         String heartbeatState = clientsAliveRegister.entrySet().stream()
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .collect(Collectors.joining("|"));
-
         sb.append("*").append(heartbeatState);
 
         return sb.toString();
@@ -426,7 +556,7 @@ public abstract class AbstractMasterAgent extends Agent {
             if (parts.length < 6) return;
 
             if (gameState == null) gameState = new GameState();
-            if (deck == null)      deck      = new Deck();
+            if (deck == null) deck = new Deck();
 
             try { gameState.setCurrentPlayerIndex(Integer.parseInt(parts[0])); }
             catch (NumberFormatException e) { gameState.setCurrentPlayerIndex(0); }
@@ -434,11 +564,11 @@ public abstract class AbstractMasterAgent extends Agent {
             try { gameState.setTurnsToPlay(Integer.parseInt(parts[1])); }
             catch (NumberFormatException e) { gameState.setTurnsToPlay(1); }
 
-            try{this.gameStarted = Boolean.parseBoolean(parts[2]);}
-            catch (Exception e){ this.gameStarted = false;}
+            try { gameStarted = Boolean.parseBoolean(parts[2]); }
+            catch (Exception e) { gameStarted = false; }
 
-            try { this.expectedPlayers = Integer.parseInt(parts[3]); }
-            catch (NumberFormatException e) { this.expectedPlayers = -1; }
+            try { expectedPlayers = Integer.parseInt(parts[3]); }
+            catch (NumberFormatException e) { expectedPlayers = -1; }
 
             List<Card> restoredCards = new ArrayList<>();
             if (!parts[4].isEmpty() && !parts[4].contains("WAITING")) {
@@ -451,40 +581,38 @@ public abstract class AbstractMasterAgent extends Agent {
                 }
             }
             deck.setCards(restoredCards);
-            List<Player> restoredPlayers = new ArrayList<>();
-            System.out.println("Parte 5 serializzazione stato" + parts[5]);
-            if (parts.length > 5 && parts[5] != null && !parts[5].isEmpty()) {
 
+            List<Player> restoredPlayers = new ArrayList<>();
+            if (parts.length > 5 && parts[5] != null && !parts[5].isEmpty()) {
                 for (String pData : parts[5].split("\\|")) {
                     String[] pParts = pData.split(",");
                     if (pParts.length >= 2) {
-                        String nick = pParts[1].replace("Player_", "");
-                        restoredPlayers.add(new Player(pParts[0], nick));
+                        restoredPlayers.add(new Player(pParts[0], pParts[1]));
                     }
                 }
-                /*if (!restoredPlayers.isEmpty()) */
             }
-            System.out.println("Players Restored: " +restoredPlayers);
             gameState.setActivePlayers(restoredPlayers);
 
-            if (parts.length >= 6) {
+            if (parts.length >= 7 && !parts[6].isEmpty()) {
                 clientsAliveRegister.clear();
                 for (String entry : parts[6].split("\\|")) {
                     String[] kv = entry.split("=");
                     if (kv.length == 2) {
-                        clientsAliveRegister.put(kv[0], Long.parseLong(kv[1]));
+                        try { clientsAliveRegister.put(kv[0], Long.parseLong(kv[1])); }
+                        catch (NumberFormatException ignored) {}
                     }
                 }
             }
 
         } catch (Exception e) {
-            System.err.println("Errore ricostruzione stato: " + e.getMessage());
+            System.err.println("[" + getLocalName() + "] Errore ricostruzione stato: " + e.getMessage());
         }
     }
 
-    /**
-     * Invia un messaggio a tutti i giocatori attivi.
-     */
+    // =========================================================
+    // UTILITY
+    // =========================================================
+
     protected void broadcastToAll(String content) {
         for (Player p : gameState.getActivePlayers()) {
             ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -494,30 +622,20 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
-    /**
-     * Annuncia il vincitore della partita.
-     */
     protected void announceWinner() {
         Player winner = gameState.getWinner();
-        System.out.println("Vincitore in announce Winner:" + winner.getNickname());
         if (winner != null) {
             broadcastToAll(Messages.WINNER + winner.getNickname());
-            System.out.println("Vincitore: " + winner.getNickname());
+            System.out.println("[" + getLocalName() + "] Vincitore: " + winner.getNickname());
         }
     }
 
-    /**
-     * Trova un player tramite il nome dell'agente.
-     */
     protected Player findPlayerByAgentName(String agentName) {
         return gameState.getActivePlayers().stream()
                 .filter(p -> p.getAgentName().equals(agentName))
                 .findFirst().orElse(null);
     }
 
-    /**
-     * Notifica la rimozione di una carta a un player.
-     */
     protected void notifyRemoveCard(AID target, String cardType) {
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
         msg.addReceiver(target);
@@ -525,9 +643,6 @@ public abstract class AbstractMasterAgent extends Agent {
         send(msg);
     }
 
-    /**
-     * Richiede al client di aggiornare la propria mano.
-     */
     protected void notifyRefresh(AID target) {
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
         msg.addReceiver(target);
@@ -535,9 +650,6 @@ public abstract class AbstractMasterAgent extends Agent {
         send(msg);
     }
 
-    /**
-     * Invia la lista aggiornata dei giocatori attivi.
-     */
     protected void broadcastPlayersList() {
         String list = gameState.getActivePlayers().stream()
                 .map(Player::getNickname)
@@ -545,9 +657,6 @@ public abstract class AbstractMasterAgent extends Agent {
         broadcastToAll(Messages.PLAYER_LIST + list);
     }
 
-    /**
-     * Invia un messaggio di errore (DISCONFIRM) al client.
-     */
     private void sendDisconfirm(ACLMessage originalMsg, String reason) {
         ACLMessage reply = originalMsg.createReply();
         reply.setPerformative(ACLMessage.DISCONFIRM);
@@ -555,42 +664,33 @@ public abstract class AbstractMasterAgent extends Agent {
         send(reply);
     }
 
-    /**
-     * Registra l'heartbeat ricevuto da un client.
-     */
     protected void handlePlayerHeartbeat(ACLMessage msg) {
         clientsAliveRegister.put(msg.getSender().getName(), System.currentTimeMillis());
     }
 
-    /**
-     * Metodo per controllare l'attività dei client.
-     * Se non riceviamo heartbeats da un tempo > PLAYER_TIMEOUT allora eliminiamo il player dalla partita.
-     * Se il player che non risulta più attivo è proprio quello di turno, lo eliminiamo e passiamo al turno del prossimo giocatore.
-     */
     protected void checkDisconnectedPlayers() {
+        if (gameState == null) return;
         long now = System.currentTimeMillis();
 
         List<Player> toRemove = gameState.getActivePlayers().stream()
                 .filter(p -> {
                     Long last = clientsAliveRegister.get(p.getAgentName());
-                    System.out.println("[CHECK TIMEOUT] " + p.getNickname() + " last heartbeat: " + (last != null ? (now - last) + "ms ago" : "never"));
                     if (last == null) return false;
-                    return  now - last > PLAYER_TIMEOUT;
+                    return now - last > PLAYER_TIMEOUT;
                 })
                 .toList();
 
         for (Player p : toRemove) {
-            System.out.println("[FAULT] Player disconnesso: " + p.getNickname());
+            System.out.println("[" + getLocalName() + "] Player disconnesso: " + p.getNickname());
 
             boolean wasCurrent = gameState.getCurrentPlayer() != null &&
                     gameState.getCurrentPlayer().getAgentName().equals(p.getAgentName());
 
             gameState.removePlayer(p);
             clientsAliveRegister.remove(p.getAgentName());
-            System.out.println("[DEBUG] Giocatori rimasti: " + gameState.getActivePlayers().size());
             broadcastToAll(Messages.PLAYER_DISCONNECTED + p.getNickname());
 
-            if (gameState.isGameOver() ) {
+            if (gameState.isGameOver()) {
                 announceWinner();
                 return;
             }
