@@ -388,26 +388,30 @@ public abstract class AbstractMasterAgent extends Agent {
      */
     protected String serializeState() {
         StringBuilder sb = new StringBuilder();
-        sb.append(gameState.getCurrentPlayerIndex()).append(":");
-        sb.append(gameState.getTurnsToPlay()).append(":");
-        sb.append(gameStarted).append(":");
-        sb.append(expectedPlayers).append(":");
+        sb.append(gameState.getCurrentPlayerIndex()).append("*");
+        sb.append(gameState.getTurnsToPlay()).append("*");
+        sb.append(gameStarted).append("*");
+        sb.append(expectedPlayers).append("*");
 
         String deckState = (deck != null && !deck.getCards().isEmpty())
                 ? deck.getCards().stream().map(c -> c.getType().name()).collect(Collectors.joining(","))
                 : "WAITING_FOR_PLAYERS";
-        sb.append(deckState).append(":");
+        sb.append(deckState).append("*");
 
         String playersState = gameState.getActivePlayers().stream()
                 .map(p -> p.getAgentName() + "," + p.getNickname())
                 .collect(Collectors.joining("|"));
         sb.append(playersState);
 
+        for(Player p : gameState.getActivePlayers()){
+            System.out.println("SERIALIZE PLAYER: " + p.getAgentName() + "," + p.getNickname());
+        }
+
         String heartbeatState = clientsAliveRegister.entrySet().stream()
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .collect(Collectors.joining("|"));
 
-        sb.append(":").append(heartbeatState);
+        sb.append("*").append(heartbeatState);
 
         return sb.toString();
     }
@@ -418,7 +422,7 @@ public abstract class AbstractMasterAgent extends Agent {
      */
     protected void reconstructState(String data) {
         try {
-            String[] parts = data.split(":", -1);
+            String[] parts = data.split("\\*", -1);
             if (parts.length < 6) return;
 
             if (gameState == null) gameState = new GameState();
@@ -447,9 +451,10 @@ public abstract class AbstractMasterAgent extends Agent {
                 }
             }
             deck.setCards(restoredCards);
+            List<Player> restoredPlayers = new ArrayList<>();
+            System.out.println("Parte 5 serializzazione stato" + parts[5]);
+            if (parts.length > 5 && parts[5] != null && !parts[5].isEmpty()) {
 
-            if (!parts[4].isEmpty() && !parts[5].equals("null")) {
-                List<Player> restoredPlayers = new ArrayList<>();
                 for (String pData : parts[5].split("\\|")) {
                     String[] pParts = pData.split(",");
                     if (pParts.length >= 2) {
@@ -457,8 +462,10 @@ public abstract class AbstractMasterAgent extends Agent {
                         restoredPlayers.add(new Player(pParts[0], nick));
                     }
                 }
-                if (!restoredPlayers.isEmpty()) gameState.setActivePlayers(restoredPlayers);
+                /*if (!restoredPlayers.isEmpty()) */
             }
+            System.out.println("Players Restored: " +restoredPlayers);
+            gameState.setActivePlayers(restoredPlayers);
 
             if (parts.length >= 6) {
                 clientsAliveRegister.clear();
