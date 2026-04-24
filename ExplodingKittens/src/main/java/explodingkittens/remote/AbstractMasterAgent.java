@@ -21,7 +21,7 @@ public abstract class AbstractMasterAgent extends Agent {
     protected ACLMessage pendingAction    = null;
     protected String     pendingCatTarget = null;
     protected Map<String, Long> clientsAliveRegister = new HashMap<>();
-    protected static final long PLAYER_TIMEOUT = 5000;
+    protected static final long PLAYER_TIMEOUT = 10000;
     protected boolean gameStarted = false;
     protected int expectedPlayers = -1;
 
@@ -333,7 +333,7 @@ public abstract class AbstractMasterAgent extends Agent {
      * Chiamato dopo ogni azione che termina il turno.
      */
     protected void nextTurn() {
-        if (gameState.isGameOver() && gameStarted) {
+        if (gameState.isGameOver()) {
             announceWinner();
             return;
         }
@@ -529,12 +529,12 @@ public abstract class AbstractMasterAgent extends Agent {
             System.out.println("[DEBUG] Giocatori rimasti: " + gameState.getActivePlayers().size());
             broadcastToAll(Messages.PLAYER_DISCONNECTED + p.getNickname());
 
-            if (gameState.isGameOver() /*&& gameStarted*/) {
+            if (gameState.isGameOver() ) {
                 announceWinner();
                 return;
             }
 
-            if (wasCurrent && gameStarted) { //TODO Serve gamestarted?
+            if (wasCurrent) {
                 gameState.nextTurn();
                 nextTurn();
             }
