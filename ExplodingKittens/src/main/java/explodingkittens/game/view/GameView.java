@@ -745,6 +745,8 @@ public class GameView {
 
         SpinnerNumberModel model = new SpinnerNumberModel(0, 0, deckSize, 1);
         JSpinner spinner = new JSpinner(model);
+        JFormattedTextField tf = ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField();
+        tf.setEditable(false);
 
         JComponent editor = spinner.getEditor();
         JFormattedTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();

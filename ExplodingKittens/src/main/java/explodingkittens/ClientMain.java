@@ -14,6 +14,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class ClientMain {
+    private static Runtime rt = Runtime.instance();
+    private  static AgentContainer container;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -76,12 +78,6 @@ public class ClientMain {
     }
     private static void startJadeAgent(String nickname, int requestedPlayers, boolean isHost) {
         try {
-            Runtime rt = Runtime.instance();
-            Profile profile = new ProfileImpl();
-            profile.setParameter(Profile.MAIN, "false");
-            profile.setParameter(Profile.MAIN_HOST, "localhost");
-
-            AgentContainer container = rt.createAgentContainer(profile);
             AgentController player = container.createNewAgent(
                     nickname,
                     "explodingkittens.remote.PlayerAgent",
@@ -98,12 +94,12 @@ public class ClientMain {
     private static String checkNickAndLobbyWithServer(String nickname) {
         try {
             BlockingQueue<String> queue = new ArrayBlockingQueue<>(1);
-            Runtime rt = Runtime.instance();
+
             Profile profile = new ProfileImpl();
             profile.setParameter(Profile.MAIN, "false");
             profile.setParameter(Profile.MAIN_HOST, "localhost");
 
-            AgentContainer container = rt.createAgentContainer(profile);
+            container = rt.createAgentContainer(profile);
 
             AgentController checker = container.createNewAgent(
                     "Checker_" + System.currentTimeMillis(),
@@ -113,8 +109,6 @@ public class ClientMain {
 
             checker.start();
             String result = queue.take();
-
-            container.kill();
 
             return result;
         } catch (Exception e) {
