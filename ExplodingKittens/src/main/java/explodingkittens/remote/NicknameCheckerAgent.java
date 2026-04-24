@@ -24,7 +24,6 @@ public class NicknameCheckerAgent extends Agent {
         String nickname = (String) getArguments()[0];
         BlockingQueue<String> resultQueue = (BlockingQueue<String>) getArguments()[1];
 
-
         AID gameMasterAID = findGameMaster();
 
         if (gameMasterAID == null) {
@@ -40,8 +39,7 @@ public class NicknameCheckerAgent extends Agent {
         ACLMessage reply = blockingReceive(3000);
 
         if (reply != null) {
-            // Il contenuto sarà "VALID_HOST", "VALID_GUEST" o "INVALID"
-            resultQueue.offer(reply.getContent());
+            resultQueue.offer(reply.getContent());  // Il contenuto sarà "VALID_HOST", "VALID_GUEST" o "INVALID"
         } else {
             resultQueue.offer("ERROR_TIMEOUT");
         }

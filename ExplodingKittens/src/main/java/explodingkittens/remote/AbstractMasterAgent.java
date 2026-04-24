@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
  * (setup, heartbeat, promozione, lobby).
  */
 public abstract class AbstractMasterAgent extends Agent {
-
     protected GameState gameState;
     protected Deck      deck;
     protected ACLMessage pendingAction    = null;
@@ -96,8 +95,7 @@ public abstract class AbstractMasterAgent extends Agent {
     }
 
     protected void setupAndStartGame() {
-        if (gameStarted) return;
-
+        if (gameStarted) return; //TODO serve ancora?
         this.gameStarted = true;
         if (deck == null || deck.size() == 0) {
             deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
@@ -129,7 +127,7 @@ public abstract class AbstractMasterAgent extends Agent {
             CardType type = CardType.valueOf(content.substring(Messages.PLAY.length()));
 
             if (!hand.contains(type)) {
-                sendDisconfirm(originalMsg, Messages.CARD_NOT_IN_HAND);
+                sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND); //TODO Serve ancora??
                 return;
             }
 
@@ -141,13 +139,13 @@ public abstract class AbstractMasterAgent extends Agent {
                 case SHUFFLE        -> handleShuffle(originalMsg);
                 case SEE_THE_FUTURE -> handleSeeTheFuture(originalMsg);
                 case CAT_CARD       -> prepareCatCard(originalMsg);
-                default             -> sendDisconfirm(originalMsg, Messages.CARD_NOT_IN_HAND);
+                //default             -> sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND);
             }
 
         } else if (content.startsWith(Messages.CAT_CARD_PLAY)) {
             long catCount = hand.stream().filter(t -> t == CardType.CAT_CARD).count();
             if (catCount < 2) {
-                sendDisconfirm(originalMsg, Messages.CARD_NOT_IN_HAND);
+                sendDisconfirm(originalMsg, Messages.TWO_CAT_NOT_IN_HAND);
                 return;
             }
             prepareCatCard(originalMsg);
