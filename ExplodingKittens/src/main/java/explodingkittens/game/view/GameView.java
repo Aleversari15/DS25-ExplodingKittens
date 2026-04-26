@@ -772,7 +772,6 @@ public class GameView {
     public void showDefuseUsedByPlayer(String nickname) {
         SwingUtilities.invokeLater(() -> {
             appendLog( "[DEFUSED]"+ nickname+ " ha usato un Defuse per salvarsi!");
-            removePlayerFromList(nickname);
         });
     }
 
