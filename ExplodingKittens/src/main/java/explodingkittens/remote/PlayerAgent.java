@@ -40,7 +40,6 @@ public class PlayerAgent extends Agent {
         Object[] args = getArguments();
         nickname = (args != null) ? args[0].toString() : getLocalName();
         requestedPlayers = (args != null && args.length >= 2) ? (int) args[1] : 2;
-
         try {
             DFAgentDescription dfd = new DFAgentDescription();
             dfd.setName(getAID());
@@ -59,7 +58,6 @@ public class PlayerAgent extends Agent {
 
         startSubAgents();
 
-        System.out.println("PlayerAgent " + nickname + " avviato.");
         addBehaviour(new RegisterToGameMasterBehaviour());
         addBehaviour(new jade.core.behaviours.TickerBehaviour(this, 1000) {
             @Override
@@ -101,7 +99,6 @@ public class PlayerAgent extends Agent {
      */
     @Override
     protected void takeDown() {
-        System.out.println("PlayerAgent " + nickname + " in fase di terminazione. Killando sottoagenti...");
         killSubAgent(handManagerAID);
         killSubAgent(kittenDefenseAID);
         super.takeDown();
@@ -118,7 +115,6 @@ public class PlayerAgent extends Agent {
                 AgentController controller = getContainerController().getAgent(aid.getLocalName());
                 if (controller != null) {
                     controller.kill();
-                    System.out.println("Sottoagente " + aid.getLocalName() + " terminato.");
                 }
             } catch (Exception e) {
                 System.err.println("Errore nel terminare l'agente " + aid.getLocalName());
@@ -156,7 +152,6 @@ public class PlayerAgent extends Agent {
         msg.addReceiver(gameMasterAID);
         msg.setContent(Messages.JOIN + ":" + requestedPlayers);
         send(msg);
-        System.out.println(nickname + " inviata richiesta JOIN (partita da " + requestedPlayers + ")");
     }
 
     /**
@@ -171,7 +166,6 @@ public class PlayerAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
                 if (msg.getPerformative() == ACLMessage.CONFIRM) {
-                    System.out.println(nickname + " registrato!");
                     myAgent.removeBehaviour(this);
                     addBehaviour(new MainListenerBehaviour());
                 } else {
@@ -198,7 +192,6 @@ public class PlayerAgent extends Agent {
             if (msg != null) {
                 String content = msg.getContent();
                 AID sender = msg.getSender();
-
                 if (content.startsWith(Messages.NEW_MASTER)) {
                     handleFailover(sender);
                     return;
@@ -221,9 +214,7 @@ public class PlayerAgent extends Agent {
          */
         private void handleFailover(AID newMaster) {
             gameMasterAID = newMaster;
-            System.out.println("[FAILOVER] Nuovo Master: " + gameMasterAID.getLocalName());
             view.showError("Master primario caduto. Backup attivato!");
-
             if (!gameStarted) {
                 sendJoinRequest();
             } else {
@@ -239,7 +230,6 @@ public class PlayerAgent extends Agent {
         private void dispatchFromGameMaster(String content) {
             String[] parts = content.split(":", 2);
             String message = parts[0] + (parts.length > 1 ? ":" : "");
-
             switch(message){
                 case Messages.PLAYER_LIST:
                     updatePlayersUI(content);
@@ -266,7 +256,6 @@ public class PlayerAgent extends Agent {
                         if(deckSize == null) deckSize = "0";
                         String msgContent = Messages.KITTEN_DRAWN + ":" + deckSize;
                         sendMsgToSubAgent(kittenDefenseAID, ACLMessage.INFORM, msgContent);
-
                     } else {
                         view.showCardDrawn(cardType);
                     }
@@ -359,7 +348,6 @@ public class PlayerAgent extends Agent {
             sendMsgToSubAgent(handManagerAID, ACLMessage.INFORM, content);
             String handData = content.substring(Messages.HAND_INIT.length());
             view.showHand(parseHand(handData));
-
             new Thread(() -> {
                 String action = view.askAction();
                 ACLMessage toGM = new ACLMessage(ACLMessage.REQUEST);

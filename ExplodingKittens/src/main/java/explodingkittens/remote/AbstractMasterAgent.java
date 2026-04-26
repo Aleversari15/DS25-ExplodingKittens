@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
  * e la logica specifica del loro ruolo (heartbeat verso backup, promozione).
  */
 public abstract class AbstractMasterAgent extends Agent {
-
     protected GameState gameState;
     protected Deck deck;
     protected ACLMessage pendingAction = null;
@@ -46,9 +45,7 @@ public abstract class AbstractMasterAgent extends Agent {
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
             ACLMessage msg = myAgent.receive(mt);
-
             if (msg == null) { block(); return; }
-
             String content = msg.getContent();
             if (content == null) return;
 
@@ -56,7 +53,6 @@ public abstract class AbstractMasterAgent extends Agent {
                 handleNicknameCheck(msg, content);
                 return;
             }
-
             if (content.startsWith(Messages.JOIN)) {
                 handleJoin(msg, content);
             }
@@ -72,11 +68,8 @@ public abstract class AbstractMasterAgent extends Agent {
         public void action() {
             ACLMessage msg = myAgent.receive();
             if (msg == null) { block(); return; }
-
-            // Ignora messaggi di sistema JADE
             String senderLocal = msg.getSender().getLocalName();
             if (senderLocal.equals("ams") || senderLocal.equals("df")) return;
-
             String content = msg.getContent();
             if (content == null) return;
 
@@ -93,23 +86,16 @@ public abstract class AbstractMasterAgent extends Agent {
         }
     }
 
-    // =========================================================
-    // GESTIONE LOBBY
-    // =========================================================
-
     /**
      * Gestisce la verifica del nickname e disponibilità della lobby.
      * Logica comune a GameMaster e BackupMaster.
      */
     protected void handleNicknameCheck(ACLMessage msg, String content) {
         String requestedNick = content.substring(Messages.NICKNAME_AND_LOBBY_CHECK.length()).trim();
-
         boolean alreadyUsed = gameState.getActivePlayers().stream()
                 .anyMatch(p -> p.getNickname().equalsIgnoreCase(requestedNick));
-
         ACLMessage reply = msg.createReply();
         reply.setPerformative(ACLMessage.INFORM);
-
         if (alreadyUsed) {
             reply.setContent(Messages.INVALID_NICKNAME);
         } else if (expectedPlayers != -1 &&
@@ -142,11 +128,7 @@ public abstract class AbstractMasterAgent extends Agent {
             if (findPlayerByAgentName(playerName) == null) {
                 Player player = new Player(playerName, msg.getSender().getLocalName());
                 gameState.addPlayer(player);
-                onPlayerJoined(); // hook per sottoclassi (es. sincronizza con backup)
-
-                System.out.println("[" + getLocalName() + "] Registrato: " + playerName
-                        + " (" + gameState.getActivePlayers().size() + "/" + expectedPlayers + ")");
-
+                onPlayerJoined();
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.CONFIRM);
                 reply.setContent(Messages.JOINED);
@@ -166,17 +148,13 @@ public abstract class AbstractMasterAgent extends Agent {
             send(reply);
         }
     }
-    //------------------------------------------------
-     //TODO: serve tenerlo qui?
+
     /**
      * chiamato ogni volta che un player si registra con successo.
-     * Il GameMaster lo usa per sincronizzare il BackupMaster.
+     * Il GameMaster lo usa per sincronizzare il BackupMaster (sottoscritto solo da Gamemaster)
      * Il BackupMaster non fa nulla di extra.
      */
-    protected void onPlayerJoined() {
-        // default: nessuna azione — sovrascrivibile dalle sottoclassi
-    }
-
+    protected void onPlayerJoined() { }
 
     /**
      * Inizializza e avvia la partita:
@@ -189,19 +167,15 @@ public abstract class AbstractMasterAgent extends Agent {
     protected void setupAndStartGame() {
         if (gameStarted) return;
         gameStarted = true;
-
         deck = DeckBuilder.prepareBaseDeck(expectedPlayers);
         Map<String, String> hands = DeckBuilder.buildPlayerHands(deck, gameState.getActivePlayers());
         DeckBuilder.insertExplodingKittens(deck, expectedPlayers);
-
         for (Player player : gameState.getActivePlayers()) {
             ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
             msg.addReceiver(new AID(player.getAgentName(), true));
             msg.setContent(Messages.HAND_INIT + hands.get(player.getAgentName()));
             send(msg);
         }
-
-        System.out.println("[" + getLocalName() + "] Partita avviata!");
         broadcastPlayersList();
         nextTurn();
         addBehaviour(new HandleActionBehaviour());
@@ -609,7 +583,6 @@ public abstract class AbstractMasterAgent extends Agent {
         Player winner = gameState.getWinner();
         if (winner != null) {
             broadcastToAll(Messages.WINNER + winner.getNickname());
-            System.out.println("[" + getLocalName() + "] Vincitore: " + winner.getNickname());
         }
     }
 
@@ -664,15 +637,12 @@ public abstract class AbstractMasterAgent extends Agent {
                 .toList();
 
         for (Player p : toRemove) {
-            System.out.println("[" + getLocalName() + "] Player disconnesso: " + p.getNickname());
-
             boolean wasCurrent = gameState.getCurrentPlayer() != null &&
                     gameState.getCurrentPlayer().getAgentName().equals(p.getAgentName());
 
             gameState.removePlayer(p);
             clientsAliveRegister.remove(p.getAgentName());
             broadcastToAll(Messages.PLAYER_DISCONNECTED + p.getNickname());
-
             if (gameState.isGameOver()) {
                 announceWinner();
                 return;

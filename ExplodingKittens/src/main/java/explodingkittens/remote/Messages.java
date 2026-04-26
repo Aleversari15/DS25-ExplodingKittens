@@ -59,7 +59,6 @@ public final class Messages {
     public static final String KITTEN_DRAWN      = "EXPLODING_KITTEN_DRAWN";
     public static final String PLAYER_ELIMINATED = "PLAYER_ELIMINATED";
 
-
     //Messaggi  tra KittenDefenseAgent e HandManagerAgent
     public static final String HAS_DEFUSE_ASK    = "HAS_DEFUSE?";
     public static final String HAS_DEFUSE_YES    = "HAS_DEFUSE:YES";
@@ -75,7 +74,6 @@ public final class Messages {
 
     //Gestione failure client
     public static final String HEARTBEAT_CLIENT = "HEARTBEAT_CLIENT";
-    public static final String CLIENT_ALIVE     = "CLIENT_ALIVE";
     public static final String PLAYER_DISCONNECTED = "PLAYER_DISCONNECTED:";
 
     //controllo nickname e ruolo Host

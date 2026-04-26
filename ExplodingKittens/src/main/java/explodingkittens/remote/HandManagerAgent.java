@@ -12,7 +12,6 @@ import jade.lang.acl.ACLMessage;
  * Agente che gestisce la mano di carte di un giocatore.
  */
 public class HandManagerAgent extends Agent {
-
     private Hand hand;
     private AID playerAgentAID;
 
@@ -21,24 +20,20 @@ public class HandManagerAgent extends Agent {
         hand = new Hand();
         Object[] args = getArguments();
         playerAgentAID = (AID) args[0];
-
-        System.out.println("HandManagerAgent avviato per: " + playerAgentAID.getLocalName());
         addBehaviour(new HandleMsgBehaviour());
     }
+
     /**
      * Comportamento ciclico che processa le richieste di gestione della mano.
      * Risponde a comandi per inizializzare la mano, aggiungere e rimuovere carte
      * o interrogare sulla presenza di un Defuse.
      */
-
     private class HandleMsgBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
             ACLMessage msg = myAgent.receive();
-
             if (msg != null) {
                 String content = msg.getContent();
-
                 if (content.startsWith(Messages.HAND_INIT)) {
                     initHand(content.substring(Messages.HAND_INIT.length()));
 
@@ -54,9 +49,6 @@ public class HandManagerAgent extends Agent {
                     System.out.println("Carta rimossa: " + type);
 
                 } else if (content.equals(Messages.GET_HAND)) {
-                    System.out.println("DEBUG HandManager " + getLocalName() +
-                            " -> rispondo a: " + playerAgentAID.getLocalName() +
-                            " con mano: " + serializeHand());
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(playerAgentAID);
                     reply.setContent(Messages.HAND_INIT + serializeHand());
@@ -73,7 +65,6 @@ public class HandManagerAgent extends Agent {
                     Card defuse = hand.getCardOfType(CardType.DEFUSE);
                     if (defuse != null) {
                         hand.removeCard(defuse);
-                        System.out.println("Defuse rimosso dalla mano.");
                     }
                 }
 
@@ -81,6 +72,7 @@ public class HandManagerAgent extends Agent {
                 block();
             }
         }
+
         /**
          * Popola la mano iniziale.
          * @param serialized stringa contenente i tipi di carta separati da virgola.
@@ -94,7 +86,6 @@ public class HandManagerAgent extends Agent {
                     hand.addCard(new Card(type, type.name(), ""));
                 }
             }
-            System.out.println("Mano inizializzata: " + serializeHand());
             ACLMessage ready = new ACLMessage(ACLMessage.INFORM);
             ready.addReceiver(playerAgentAID);
             ready.setContent(Messages.HAND_READY);

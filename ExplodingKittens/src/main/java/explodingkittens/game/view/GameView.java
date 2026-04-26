@@ -67,10 +67,10 @@ public class GameView {
                     BufferedImage img = ImageIO.read(is);
                     cardImages.put(entry.getKey(), img);
                 } else {
-                    System.err.println("[GameView] Immagine non trovata nel classpath: /" + entry.getValue());
+                    System.err.println("GameView - Immagine non trovata nel classpath: /" + entry.getValue());
                 }
             } catch (Exception e) {
-                System.err.println("[GameView] Errore caricamento immagine: " + entry.getValue());
+                System.err.println("GameView - Errore caricamento immagine: " + entry.getValue());
                 e.printStackTrace();
             }
         }
@@ -406,8 +406,8 @@ public class GameView {
             case "SHUFFLE"        -> inputQueue.offer("PLAY:SHUFFLE");
             case "SEE_THE_FUTURE" -> inputQueue.offer("PLAY:SEE_THE_FUTURE");
             case "CAT_CARD"       -> askCatCardTarget();
-            case "DEFUSE"         -> appendLog("[Info] Il Defuse si attiva automaticamente se peschi un Kitten!");
-            default -> appendLog("[Info] Questa carta non può essere giocata direttamente.");
+            case "DEFUSE"         -> appendLog("[INFO] Il Defuse si attiva automaticamente se peschi un Kitten!");
+            default -> appendLog("[INFO] Questa carta non può essere giocata direttamente.");
         }
     }
 
@@ -532,7 +532,7 @@ public class GameView {
         SwingUtilities.invokeLater(() -> {
             turnLabel.setText("In attesa dei giocatori...");
             turnLabel.setForeground(TEXT_MUTED);
-            appendLog("[Sistema] In attesa degli altri giocatori...");
+            appendLog("[SISTEMA] In attesa degli altri giocatori...");
         });
     }
 
@@ -638,7 +638,7 @@ public class GameView {
      */
     public void showCardDrawn(String cardType) {
         SwingUtilities.invokeLater(() -> {
-            appendLog("[Pesca] Hai pescato: " + cardName(cardType));
+            appendLog("[PESCA] Hai pescato: " + cardName(cardType));
             setActionsEnabled(false);
         });
     }
@@ -650,7 +650,7 @@ public class GameView {
      */
     public void showCardPlayed(String nickname, String cardType) {
         SwingUtilities.invokeLater(() ->
-                appendLog("[Giocata] " + nickname + " ha giocato: " + cardName(cardType)));
+                appendLog("[GIOCATA] " + nickname + " ha giocato: " + cardName(cardType)));
     }
 
     /**
@@ -659,7 +659,7 @@ public class GameView {
      */
     public void showStolenCard(String cardType) {
         SwingUtilities.invokeLater(() ->
-                appendLog("[Furto] Ti e' stata rubata: " + cardName(cardType)));
+                appendLog("[FURTO] Ti e' stata rubata: " + cardName(cardType)));
     }
 
     /**
@@ -668,7 +668,7 @@ public class GameView {
      */
     public void showSeeTheFuture(List<String> top3) {
         SwingUtilities.invokeLater(() -> {
-            appendLog("[See the Future] Prossime 3 carte del mazzo:");
+            appendLog("[SEE THE FUTURE] Prossime 3 carte del mazzo:");
             for (int i = 0; i < top3.size(); i++) {
                 String c = top3.get(i).trim();
                 if (!c.isEmpty()) appendLog("   " + (i + 1) + ". " + cardName(c));
@@ -692,7 +692,7 @@ public class GameView {
      */
     public void showDefuseUsed() {
         SwingUtilities.invokeLater(() ->
-                appendLog("[Defuse] Hai usato il Defuse. Sei salvo!"));
+                appendLog("[DEFUSE] Hai usato il Defuse. Sei salvo!"));
     }
 
     /**
@@ -745,7 +745,7 @@ public class GameView {
      * @param message
      */
     public void showError(String message) {
-        SwingUtilities.invokeLater(() -> appendLog("[Errore] " + message));
+        SwingUtilities.invokeLater(() -> appendLog("[ERRORE] " + message));
     }
 
     /**

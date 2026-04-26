@@ -14,10 +14,8 @@ import jade.lang.acl.ACLMessage;
  * Tutta la logica condivisa è in AbstractMasterAgent.
  */
 public class BackupMasterAgent extends AbstractMasterAgent {
-
     private long lastHeartbeatTime = 0;
     private boolean promoted = false;
-
     private static final long TIMEOUT = 10_000;
     private static final long TICKER_PERIOD = 2_000;
 
@@ -62,7 +60,6 @@ public class BackupMasterAgent extends AbstractMasterAgent {
 
     private class TimeoutWatchBehaviour extends TickerBehaviour {
         TimeoutWatchBehaviour(jade.core.Agent a, long period) { super(a, period); }
-
         @Override
         protected void onTick() {
             if (!promoted
@@ -77,10 +74,8 @@ public class BackupMasterAgent extends AbstractMasterAgent {
     private void promoteToMaster() {
         System.out.println("[BackupMaster] GameMaster primario caduto. Mi promuovo a Master!");
         promoted = true;
-
         updateDFtoPrimary();
         broadcastNewMaster();
-
         if (gameState != null
                 && !gameState.isGameOver()
                 && !gameState.getActivePlayers().isEmpty()
@@ -91,7 +86,6 @@ public class BackupMasterAgent extends AbstractMasterAgent {
                     + " Giocatori=" + (gameState != null ? gameState.getActivePlayers().size() : 0)
                     + " gameStarted=" + gameStarted);
         }
-
         startPlayerTimeoutChecker();
     }
 
@@ -104,7 +98,6 @@ public class BackupMasterAgent extends AbstractMasterAgent {
             sd.setName("exploding-kittens-backup");
             dfd.addServices(sd);
             DFService.register(this, dfd);
-            System.out.println("[BackupMaster] Registrato nel DF.");
         } catch (Exception e) { e.printStackTrace(); }
     }
 
@@ -118,7 +111,6 @@ public class BackupMasterAgent extends AbstractMasterAgent {
             sd.setName("exploding-kittens-promoted");
             dfd.addServices(sd);
             DFService.register(this, dfd);
-            System.out.println("[BackupMaster] Ora registrato come GameMaster nel DF.");
         } catch (Exception e) { e.printStackTrace(); }
     }
 

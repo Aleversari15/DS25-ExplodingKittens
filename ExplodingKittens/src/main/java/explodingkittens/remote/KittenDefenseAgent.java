@@ -14,7 +14,6 @@ import jade.lang.acl.MessageTemplate;
  * del giocatore se assente.
  */
 public class KittenDefenseAgent extends Agent {
-
     private AID playerAgentAID;
     private AID handManagerAID;
     private String currentDeckSize;
@@ -24,10 +23,9 @@ public class KittenDefenseAgent extends Agent {
         Object[] args = getArguments();
         playerAgentAID = (AID) args[0];
         handManagerAID = (AID) args[1];
-
-        System.out.println("KittenDefenseAgent avviato.");
         addBehaviour(new ListenForKittenBehaviour());
     }
+
     /**
      * Comportamento che resta in ascolto del segnale KITTEN_DRAWN dal PlayerAgent.
      * Quando viene pescato un exploding kitten, avvia la procedura di verifica del Defuse interpellando l'HandManager.
@@ -40,25 +38,22 @@ public class KittenDefenseAgent extends Agent {
                     MessageTemplate.MatchSender(playerAgentAID)
             );
             ACLMessage msg = myAgent.receive(mt);
-
             if (msg != null && msg.getContent().startsWith(Messages.KITTEN_DRAWN)) {
-
                 String content = msg.getContent();
                 if (content.contains(":")) {
                     currentDeckSize = content.split(":")[1];
                 }
-
                 ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
                 ask.addReceiver(handManagerAID);
                 ask.setContent(Messages.HAS_DEFUSE_ASK);
                 send(ask);
-
                 addBehaviour(new WaitForDefuseCheckBehaviour());
             } else {
                 block();
             }
         }
     }
+
     /**
      * Comportamento che attende la risposta dall'HandManager riguardo la presenza di un Defuse.
      * Gestisce i due scenari possibili: uso del Defuse o eliminazione del giocatore.
@@ -71,19 +66,16 @@ public class KittenDefenseAgent extends Agent {
                     MessageTemplate.MatchSender(handManagerAID)
             );
             ACLMessage msg = myAgent.receive(mt);
-
             if (msg != null) {
                 myAgent.removeBehaviour(this);
                 if (msg.getContent().equals(Messages.HAS_DEFUSE_YES)) {
                     addBehaviour(new UseDefuseBehaviour());
                 } else if (msg.getContent().equals(Messages.HAS_DEFUSE_NO)) {
-                    // Chiede al PlayerAgent di mostrare il messaggio di eliminazione
                     ACLMessage notify = new ACLMessage(ACLMessage.INFORM);
                     notify.addReceiver(playerAgentAID);
                     notify.setContent(Messages.SHOW_ELIMINATED);
                     send(notify);
 
-                    // Comunica l'eliminazione al PlayerAgent
                     ACLMessage eliminated = new ACLMessage(ACLMessage.INFORM);
                     eliminated.addReceiver(playerAgentAID);
                     eliminated.setContent(Messages.PLAYER_ELIMINATED);
@@ -127,7 +119,6 @@ public class KittenDefenseAgent extends Agent {
     private class WaitForExplodingPositionBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
-
             MessageTemplate mt = MessageTemplate.and(
                     MessageTemplate.MatchPerformative(ACLMessage.INFORM),
                     MessageTemplate.MatchSender(playerAgentAID)

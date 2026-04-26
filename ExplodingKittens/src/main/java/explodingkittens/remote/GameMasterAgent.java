@@ -13,23 +13,18 @@ import jade.lang.acl.ACLMessage;
  * Tutta la logica condivisa è in AbstractMasterAgent.
  */
 public class GameMasterAgent extends AbstractMasterAgent {
-
     private AID backupMasterAID;
 
     @Override
     protected void setup() {
         registerInDF();
-
         Object[] args = getArguments();
         if (args != null && args.length > 0) {
             expectedPlayers = Integer.parseInt(args[0].toString());
         }
-
         gameState = new explodingkittens.game.model.GameState();
         deck = new explodingkittens.game.model.Deck();
-
         startHeartbeat();
-
         System.out.println("[GameMaster] Avviato, aspetto " + expectedPlayers + " giocatori...");
         lobbyBehaviour = new LobbyBehaviour();
         addBehaviour(lobbyBehaviour);
@@ -55,13 +50,13 @@ public class GameMasterAgent extends AbstractMasterAgent {
      * Appena il backup è disponibile invia anche un heartbeat immediato.
      */
     private void startHeartbeat() {
-            addBehaviour(new TickerBehaviour(this, 3000) {
-                @Override
-                protected void onTick() {
-                    if (backupMasterAID == null) backupMasterAID = findBackup();
-                    if (backupMasterAID != null) sendHeartbeat();
-                }
-            });
+        addBehaviour(new TickerBehaviour(this, 3000) {
+            @Override
+            protected void onTick() {
+                if (backupMasterAID == null) backupMasterAID = findBackup();
+                if (backupMasterAID != null) sendHeartbeat();
+            }
+        });
 
         addBehaviour(new TickerBehaviour(this, 3000) {
             @Override
@@ -109,7 +104,6 @@ public class GameMasterAgent extends AbstractMasterAgent {
             sd.setName("exploding-kittens");
             dfd.addServices(sd);
             DFService.register(this, dfd);
-            System.out.println("[GameMaster] Registrato nel DF.");
         } catch (Exception e) { e.printStackTrace(); }
     }
 }

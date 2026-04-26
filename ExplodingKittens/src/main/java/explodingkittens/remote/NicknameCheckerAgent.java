@@ -18,14 +18,11 @@ import java.util.concurrent.BlockingQueue;
  * restituendo codici di stato predefiniti (es. VALID_HOST, VALID_GUEST, INVALID).
  */
 public class NicknameCheckerAgent extends Agent {
-
     @Override
     protected void setup() {
         String nickname = (String) getArguments()[0];
         BlockingQueue<String> resultQueue = (BlockingQueue<String>) getArguments()[1];
-
         AID gameMasterAID = findGameMaster();
-
         if (gameMasterAID == null) {
             resultQueue.offer("ERROR_NO_SERVER");
             doDelete();
@@ -35,15 +32,12 @@ public class NicknameCheckerAgent extends Agent {
         msg.addReceiver(gameMasterAID);
         msg.setContent(Messages.NICKNAME_AND_LOBBY_CHECK + nickname);
         send(msg);
-
         ACLMessage reply = blockingReceive(3000);
-
         if (reply != null) {
             resultQueue.offer(reply.getContent());  // Il contenuto sarà "VALID_HOST", "VALID_GUEST" o "INVALID"
         } else {
             resultQueue.offer("ERROR_TIMEOUT");
         }
-
         doDelete();
     }
 

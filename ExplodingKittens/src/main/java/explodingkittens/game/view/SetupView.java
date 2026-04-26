@@ -42,14 +42,13 @@ public class SetupView {
         gbc.insets = new Insets(10, 0, 10, 0);
         gbc.gridx = 0;
 
-        //Titolo
         JLabel titleLabel = new JLabel("EXPLODING KITTENS", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Georgia", Font.BOLD, 28));
         titleLabel.setForeground(ACCENT_ORANGE);
         gbc.gridy = 0;
         mainPanel.add(titleLabel, gbc);
 
-        //Campo per inserire il nickname
+
         JLabel nameLabel = new JLabel("IL TUO NICKNAME:");
         nameLabel.setForeground(TEXT_PRIMARY);
         gbc.gridy = 1;
@@ -59,7 +58,6 @@ public class SetupView {
         gbc.gridy = 2;
         mainPanel.add(nameField, gbc);
 
-        //Label per mostrare eventuali errori nella scelta del nickmname
         errorLabel = new JLabel("");
         errorLabel.setForeground(new Color(220, 60, 60));
         errorLabel.setFont(new Font("Georgia", Font.PLAIN, 12));
@@ -68,8 +66,6 @@ public class SetupView {
         gbc.insets = new Insets(0, 0, 5, 0);
         mainPanel.add(errorLabel, gbc);
 
-
-        //Scelta numero giocatori
         countLabel = new JLabel("NUMERO GIOCATORI (2-4):");
         countLabel.setForeground(TEXT_PRIMARY);
         gbc.gridy = 4;
@@ -80,8 +76,6 @@ public class SetupView {
         gbc.gridy = 5;
         mainPanel.add(playerSpinner, gbc);
 
-
-        // Bottone per entrare in partita
         startButton = new JButton("CONFERMA");
         styleButton(startButton);
         gbc.gridy = 6 ;
