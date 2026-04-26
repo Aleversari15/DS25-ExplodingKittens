@@ -324,10 +324,6 @@ public class PlayerAgent extends Agent {
                     queryingForMaster = true;
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
                     break;
-                case Messages.ASK_DEFUSE_POSITION:
-                    int deckSizeKD = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
-                    askDefusePosition(deckSizeKD);
-                    break;
                 case Messages.PLAYER_DISCONNECTED:
                     view.showPlayerDisconnected(parts[1]);
                     break;
@@ -369,19 +365,7 @@ public class PlayerAgent extends Agent {
                 myAgent.send(toGM);
             }).start();
         }
-        /**
-         * Avvia un thread separato per richiedere all'utente la posizione del mazzo
-         * in cui reinserire l'Exploding Kitten dopo un Defuse.
-         */
-        private void askDefusePosition(int deckSize) {
-            new Thread(() -> {
-                int position = view.askDefusePosition(deckSize);
-                ACLMessage defuseMsg = new ACLMessage(ACLMessage.REQUEST);
-                defuseMsg.addReceiver(gameMasterAID);
-                defuseMsg.setContent(Messages.DEFUSE_PLAY + position);
-                myAgent.send(defuseMsg);
-            }).start();
-        }
+
         /**
          * Gestisce i messaggi provenienti dall'agente HandManager.
          * @param content Il contenuto del messaggio.
@@ -423,6 +407,7 @@ public class PlayerAgent extends Agent {
             }
 
         }
+
         /**
          * Gestisce i messaggi provenienti dall'agente KittenDefense.
          * @param content Il contenuto del messaggio.
@@ -437,7 +422,7 @@ public class PlayerAgent extends Agent {
                     break;
                 case Messages.ASK_DEFUSE_POSITION:
                     int deckSizeGM = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
-                    askDefusePosition(deckSizeGM);
+                    askDefusePositionForKitten(deckSizeGM);
                     break;
                 case Messages.REFRESH_HAND_AFTER_DEFUSE:
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
@@ -457,6 +442,20 @@ public class PlayerAgent extends Agent {
                     break;
             }
         }
+    }
+
+    /**
+     * Avvia un thread separato per richiedere all'utente la posizione del mazzo
+     * in cui reinserire l'Exploding Kitten dopo un Defuse.
+     */
+    private void askDefusePositionForKitten(int deckSize) {
+        new Thread(() -> {
+            int position = view.askDefusePosition(deckSize);
+            ACLMessage defuseMsg = new ACLMessage(ACLMessage.INFORM);
+            defuseMsg.addReceiver(kittenDefenseAID);
+            defuseMsg.setContent(Messages.DEFUSE_PLAY + position);
+            this.send(defuseMsg);
+        }).start();
     }
 
     /**

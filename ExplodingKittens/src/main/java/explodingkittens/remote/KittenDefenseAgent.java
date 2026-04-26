@@ -136,11 +136,10 @@ public class KittenDefenseAgent extends Agent {
 
             if (msg != null) {
                 if (msg.getContent().startsWith(Messages.DEFUSE_PLAY)) {
-                    ACLMessage defuse = new ACLMessage(ACLMessage.INFORM);
+                    ACLMessage defuse = new ACLMessage(ACLMessage.REQUEST);
                     defuse.addReceiver(playerAgentAID);
                     defuse.setContent(msg.getContent());
                     send(defuse);
-
                     myAgent.removeBehaviour(this);
                 }
             } else {
