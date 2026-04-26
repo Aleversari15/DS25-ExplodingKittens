@@ -18,6 +18,9 @@ public class KittenDefenseAgent extends Agent {
     private AID handManagerAID;
     private String currentDeckSize;
 
+    private WaitForDefuseCheckBehaviour waitForDefuseBehaviour;
+    private WaitForExplodingPositionBehaviour waitForPositionBehaviour;
+
     @Override
     protected void setup() {
         Object[] args = getArguments();
@@ -43,11 +46,22 @@ public class KittenDefenseAgent extends Agent {
                 if (content.contains(":")) {
                     currentDeckSize = content.split(":")[1];
                 }
+
+                if (waitForDefuseBehaviour != null) {
+                    myAgent.removeBehaviour(waitForDefuseBehaviour);
+                    waitForDefuseBehaviour = null;
+                }
+                if (waitForPositionBehaviour != null) {
+                    myAgent.removeBehaviour(waitForPositionBehaviour);
+                    waitForPositionBehaviour = null;
+                }
+
                 ACLMessage ask = new ACLMessage(ACLMessage.INFORM);
                 ask.addReceiver(handManagerAID);
                 ask.setContent(Messages.HAS_DEFUSE_ASK);
                 send(ask);
-                addBehaviour(new WaitForDefuseCheckBehaviour());
+                waitForDefuseBehaviour = new WaitForDefuseCheckBehaviour();
+                addBehaviour(waitForDefuseBehaviour);
             } else {
                 block();
             }
@@ -68,6 +82,7 @@ public class KittenDefenseAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
                 myAgent.removeBehaviour(this);
+                waitForDefuseBehaviour = null;
                 if (msg.getContent().equals(Messages.HAS_DEFUSE_YES)) {
                     addBehaviour(new UseDefuseBehaviour());
                 } else if (msg.getContent().equals(Messages.HAS_DEFUSE_NO)) {
@@ -109,7 +124,8 @@ public class KittenDefenseAgent extends Agent {
             ask.setContent(Messages.ASK_DEFUSE_POSITION + currentDeckSize);
             send(ask);
 
-            addBehaviour(new WaitForExplodingPositionBehaviour());
+            waitForPositionBehaviour = new WaitForExplodingPositionBehaviour();
+            addBehaviour(waitForPositionBehaviour);
         }
     }
     /**
@@ -132,6 +148,7 @@ public class KittenDefenseAgent extends Agent {
                     defuse.setContent(msg.getContent());
                     send(defuse);
                     myAgent.removeBehaviour(this);
+                    waitForPositionBehaviour = null;
                 }
             } else {
                 block();
