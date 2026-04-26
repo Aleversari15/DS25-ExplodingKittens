@@ -325,10 +325,13 @@ public class PlayerAgent extends Agent {
                     sendMsgToSubAgent(handManagerAID, ACLMessage.REQUEST, Messages.GET_HAND);
                     break;
                 case Messages.PLAYER_DISCONNECTED:
-                    view.showPlayerDisconnected(parts[1]);
+                    view.showPlayerDisconnectedOrEliminated(true, parts[1]);
                     break;
                 case Messages.SHOW_DEFUSE_USED:
                     view.showDefuseUsedByPlayer(parts[1]);
+                    break;
+                case Messages.PLAYER_ELIMINATED_BROADCAST:
+                    view.showPlayerDisconnectedOrEliminated(false, parts[1]);
                     break;
                 default:
                     view.showError(content);

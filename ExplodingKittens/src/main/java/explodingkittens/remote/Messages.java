@@ -40,6 +40,7 @@ public final class Messages {
     public static final String REFRESH_HAND      = "REFRESH_HAND";
     public static final String REQUEST_HAND      = "REQUEST_HAND";
     public static final String HAND_RESPONSE     = "HAND_RESPONSE:";
+    public static final String PLAYER_ELIMINATED_BROADCAST = "PLAYER_ELIMINATED_BROADCAST:";
 
     //Messaggi tra player e suoi sottoagenti
     public static final String HAND_INIT         = "HAND:";

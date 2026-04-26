@@ -478,7 +478,7 @@ public abstract class AbstractMasterAgent extends Agent {
         Player eliminated = findPlayerByAgentName(msg.getSender().getName());
         if (eliminated != null) {
             gameState.removePlayer(eliminated);
-            broadcastToAll(eliminated.getNickname() + " e' stato eliminato!");
+            broadcastToAll(Messages.PLAYER_ELIMINATED_BROADCAST + eliminated.getNickname());
             broadcastPlayersList();
             System.out.println(eliminated.getNickname() + " eliminato.");
         }

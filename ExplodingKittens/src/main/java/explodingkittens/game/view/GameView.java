@@ -7,7 +7,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -879,10 +878,16 @@ public class GameView {
     /**
      * Metodo per mostrare nel log che un player si è disconnesso e rimozione dalla lista dei players.
      * @param nickname del player disconnesso.
+     * @param disconnected true if player has disconnected, false if just eliminated.
      */
-    public void showPlayerDisconnected(String nickname) {
+    public void showPlayerDisconnectedOrEliminated(Boolean disconnected, String nickname) {
         SwingUtilities.invokeLater(() -> {
-            appendLog("[DISCONNESSIONE] " + nickname + " si è disconnesso.");
+            if(disconnected){
+                appendLog("[DISCONNESSIONE] " + nickname + " si è disconnesso.");
+            }
+            else{
+                appendLog("[ELIMINAZIONE] " + nickname + " è esploso!!!");
+            }
             removePlayerFromList(nickname);
         });
     }
